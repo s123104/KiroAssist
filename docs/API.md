@@ -1,6 +1,6 @@
-# 📚 ClickPilot API 文檔
+# 📚 KiroAssist API 文檔
 
-本文檔詳細說明 ClickPilot 的所有 API 接口和使用方法。
+本文檔詳細說明 KiroAssist 的所有 API 接口和使用方法。
 
 ## 🌐 全域 API
 
@@ -60,7 +60,7 @@ console.log(retryClickerStatus().isRunning); // false
 
 #### `retryClickerStatus()`
 
-獲取當前 ClickPilot 的狀態信息。
+獲取當前 KiroAssist 的狀態信息。
 
 ```javascript
 const status = retryClickerStatus();
@@ -357,7 +357,7 @@ const icon = createSVGIcon("refresh", "my-icon-class");
 
 ### DOM 事件
 
-ClickPilot 會監聽以下 DOM 事件：
+KiroAssist 會監聽以下 DOM 事件：
 
 #### MutationObserver 事件
 - **childList**：子節點變化
@@ -372,7 +372,7 @@ ClickPilot 會監聽以下 DOM 事件：
 
 ### 自定義事件
 
-你可以監聽 ClickPilot 的自定義事件：
+你可以監聽 KiroAssist 的自定義事件：
 
 ```javascript
 // 監聽點擊事件
@@ -417,7 +417,7 @@ const config = {
 
 ### 錯誤類型
 
-ClickPilot 會處理以下類型的錯誤：
+KiroAssist 會處理以下類型的錯誤：
 
 1. **DOM 操作錯誤**：元素不存在或無法訪問
 2. **點擊錯誤**：按鈕無法點擊或點擊失敗
@@ -430,7 +430,7 @@ ClickPilot 會處理以下類型的錯誤：
 try {
   window.AutoRetryClicker.start();
 } catch (error) {
-  console.error('ClickPilot 啟動失敗:', error);
+  console.error('KiroAssist 啟動失敗:', error);
   // 處理錯誤
 }
 ```

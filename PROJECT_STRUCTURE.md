@@ -1,11 +1,11 @@
-# 📁 ClickPilot 專案結構
+# 📁 KiroAssist 專案結構
 
-本文檔說明 ClickPilot 專案的目錄結構和文件組織。
+本文檔說明 KiroAssist 專案的目錄結構和文件組織。
 
 ## 🌳 目錄結構
 
 ```
-ClickPilot/
+KiroAssist/
 ├── 📄 README.md              # 專案主要說明文檔
 ├── 🚀 ClickPilot.js          # 主要腳本文件
 ├── 📋 CHANGELOG.md           # 版本更新日誌
@@ -188,7 +188,7 @@ ClickPilot/
 ## 📞 聯繫和支援
 
 ### 技術支援
-- **GitHub Issues**：[問題回報](https://github.com/s123104/ClickPilot/issues)
+- **GitHub Issues**：[問題回報](https://github.com/s123104/KiroAssist/issues)
 - **文檔問題**：在對應文件中提出 Issue
 - **功能建議**：使用 Feature Request 模板
 

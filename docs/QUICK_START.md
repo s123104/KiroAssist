@@ -1,6 +1,6 @@
-# 🚀 ClickPilot 快速入門指南
+# 🚀 KiroAssist 快速入門指南
 
-歡迎使用 ClickPilot！這份指南將幫助你在 5 分鐘內開始使用自動重試功能。
+歡迎使用 KiroAssist！這份指南將幫助你在 5 分鐘內開始使用自動重試功能。
 
 ## 📋 前置準備
 
@@ -11,9 +11,9 @@
 3. 按照安裝指示完成安裝
 4. 啟動 Kiro 並完成初始設置
 
-### 2. 準備 ClickPilot 腳本
+### 2. 準備 KiroAssist 腳本
 
-1. 前往 [ClickPilot GitHub](https://github.com/s123104/ClickPilot)
+1. 前往 [KiroAssist GitHub](https://github.com/s123104/KiroAssist)
 2. 複製 `ClickPilot.js` 文件的完整內容
 3. 或直接下載整個專案到本地
 
@@ -251,7 +251,7 @@ delete window.AutoRetryClicker;
 
 ### 技術支援
 
-- **GitHub Issues**: [回報問題](https://github.com/s123104/ClickPilot/issues)
+- **GitHub Issues**: [回報問題](https://github.com/s123104/KiroAssist/issues)
 - **文檔**: [完整文檔](../README.md)
 - **作者聯繫**: [@azlife_1224](https://www.threads.net/@azlife_1224)
 
@@ -262,7 +262,7 @@ delete window.AutoRetryClicker;
 
 ---
 
-**🎉 恭喜！你已經成功完成 ClickPilot 的快速入門。**
+**🎉 恭喜！你已經成功完成 KiroAssist 的快速入門。**
 
 現在你可以享受自動化重試帶來的便利，專注於更重要的開發工作！
 

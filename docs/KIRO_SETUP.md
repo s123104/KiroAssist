@@ -1,6 +1,6 @@
 # 🎯 Kiro 專用設置指南
 
-專為 Kiro AI IDE 用戶設計的 ClickPilot 快速設置指南。
+專為 Kiro AI IDE 用戶設計的 KiroAssist 快速設置指南。
 
 ## 📥 第一步：下載 Kiro
 
@@ -26,7 +26,7 @@ Kiro 上方選單 → 說明 → 切換開發人員工具
 在頁面空白處右鍵 → 檢查
 ```
 
-## 🚀 第三步：安裝 ClickPilot
+## 🚀 第三步：安裝 KiroAssist
 
 ### 永久安裝（推薦）
 
@@ -155,7 +155,7 @@ delete window.AutoRetryClicker;
 
 ## 📞 技術支援
 
-- **GitHub Issues**: [問題回報](https://github.com/s123104/ClickPilot/issues)
+- **GitHub Issues**: [問題回報](https://github.com/s123104/KiroAssist/issues)
 - **作者聯繫**: [@azlife_1224](https://www.threads.net/@azlife_1224)
 - **完整文檔**: [README.md](../README.md)
 
@@ -163,4 +163,4 @@ delete window.AutoRetryClicker;
 
 **🎉 現在你可以在 Kiro 中享受自動重試的便利！**
 
-*專注於創作，讓 ClickPilot 處理重複的點擊操作。*
+*專注於創作，讓 KiroAssist 處理重複的點擊操作。*

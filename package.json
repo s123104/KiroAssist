@@ -1,5 +1,5 @@
 {
-  "name": "clickpilot",
+  "name": "kiroassist",
   "version": "3.0.1",
   "description": "專業級自動重試按鈕點擊器 - 為 Kiro AI IDE 量身打造",
   "main": "ClickPilot.js",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/s123104/ClickPilot.git"
+    "url": "git+https://github.com/s123104/KiroAssist.git"
   },
   "keywords": [
     "kiro",
@@ -32,9 +32,9 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/s123104/ClickPilot/issues"
+    "url": "https://github.com/s123104/KiroAssist/issues"
   },
-  "homepage": "https://github.com/s123104/ClickPilot#readme",
+  "homepage": "https://github.com/s123104/KiroAssist#readme",
   "engines": {
     "node": ">=14.0.0"
   },
