@@ -1,9 +1,9 @@
 /*** 
-* 📦 模組：KiroAssist v3.2.4 - 智能助手專業版 (極簡腳本整合版)
-* 🕒 最後更新：2025-07-17T17:45:00+08:00
+* 📦 模組：KiroAssist v3.2.5 - 智能助手專業版 (極簡腳本整合版)
+* 🕒 最後更新：2025-07-17T18:00:00+08:00
 * 🧑‍💻 作者：threads:azlife_1224
-* 🔢 版本：v3.2.4
-* 📝 摘要：完全採用用戶測試腳本 v2.1.1 邏輯，移除衝突的檢測邏輯
+* 🔢 版本：v3.2.5
+* 📝 摘要：採用極簡腳本邏輯，提供高效能的按鈕檢測與點擊功能
 *
 * 🎯 功能特色：
 * ✅ 自動檢測Retry按鈕 (精確選擇器匹配)
@@ -18,9 +18,9 @@
 * ✅ 流暢動畫效果
 * ✅ 現代化設計語言
 * ✅ TrustedHTML相容性
-* 🆕 完全採用用戶測試腳本 v2.1.1 邏輯
-* 🆕 使用 querySelectorAll 搜索避免遺漏目標
-* 🆕 移除衝突的複雜檢測邏輯，確保功能正常運作
+* 🆕 極簡腳本整合 (統一檢測邏輯)
+* 🆕 精確元素準備檢查 (isElementReady)
+* 🆕 簡化點擊執行流程
 */
 
 (function () {
@@ -31,7 +31,103 @@
       console.log("[KiroAssist] 已載入，跳過重複初始化");
       return;
     }
-  
+
+    // --- 設定 ---
+    const DEBOUNCE_DELAY = 250;
+    let debounceTimer;
+
+    /**
+     * 🎯 目標定義與選擇器備案
+     * 腳本會依照此處定義的順序和選擇器來尋找按鈕。
+     */
+    const TARGET_DEFINITIONS = [
+        {
+            name: 'Run Button',
+            selectors: [
+                'div.kiro-snackbar button.kiro-button[data-variant="primary"][data-purpose="alert"]',
+                'div.kiro-snackbar-actions button[data-variant="primary"]'
+            ],
+            validate: (element) => element.textContent.trim() === 'Run'
+        },
+        {
+            name: 'Retry Button',
+            selectors: [
+                'div.kiro-chat-message-body button.kiro-button[data-variant="secondary"][data-purpose="default"]',
+                'button.kiro-button[data-variant="secondary"]'
+            ],
+            validate: (element) => element.textContent.trim() === 'Retry'
+        }
+    ];
+
+    // --- 核心邏輯 ---
+
+    /**
+     * 檢查一個元素是否在畫面上可見且可點擊。
+     */
+    function isElementReady(element) {
+        if (!element) return false;
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity > 0 &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            !element.disabled &&
+            !element.hasAttribute('disabled')
+        );
+    }
+
+    /**
+     * 主函式：遍歷所有目標定義，使用 querySelectorAll 尋找並點擊。
+     */
+    function checkAndClick() {
+        for (const target of TARGET_DEFINITIONS) {
+            // 檢查模組是否啟用
+            const moduleKey = target.name === 'Run Button' ? 'kiroSnackbar' : 'retryButton';
+            if (window.KiroAssist && !window.KiroAssist.moduleConfig[moduleKey].enabled) {
+                continue;
+            }
+
+            for (const selector of target.selectors) {
+                const foundElements = document.querySelectorAll(selector);
+                for (const element of foundElements) {
+                    if (isElementReady(element) && (!target.validate || target.validate(element))) {
+                        console.log(`[KiroAssist] 發現目標: "${target.name}"，執行點擊！`);
+                        element.click();
+                        
+                        // 更新統計
+                        if (window.KiroAssist) {
+                            window.KiroAssist.totalClicks++;
+                            window.KiroAssist.moduleStats[moduleKey]++;
+                            window.KiroAssist.updateControlPanel();
+                        }
+                        
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // --- DOM 變動監視器 ---
+    const observer = new MutationObserver(() => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(checkAndClick, DEBOUNCE_DELAY);
+    });
+
+    function startObserver() {
+        observer.observe(document.body, { childList: true, subtree: true });
+        console.log('[KiroAssist] 極簡腳本邏輯已啟動...');
+        checkAndClick();
+    }
+
+    function stopObserver() {
+        observer.disconnect();
+        console.log('[KiroAssist] 監控已停止');
+    }
+
     /**
      * 🎨 SVG圖標庫 - 專業App風格 (DOM結構定義)
      */
@@ -238,752 +334,7 @@
       container.appendChild(svg);
       return container;
     }
-  
-    /**
-     * 🎯 彈性選擇器配置 - 降低頁面結構耦合 (Enhanced with CursorAutoAccept strategies)
-     */
-    const SELECTORS = {
-      // 按鈕容器選擇器 - 擴展支援更多變體
-      buttonContainers: [
-        '.kiro-snackbar',
-        '.kiro-snackbar-container',
-        '.kiro-snackbar-actions',
-        '.kiro-snackbar-header',
-        'div[class*="kiro-snackbar"]',
-        'div[class*="kiro-button"]',
-      ],
-  
-      // Retry按鈕選擇器 - 針對具體HTML結構優化
-      retryButtons: [
-        // 精確匹配用戶提供的結構
-        'button.kiro-button[data-variant="secondary"][data-purpose="default"]',
-        'button.kiro-button[data-variant="secondary"]',
-        // 通用備選方案
-        'button.kiro-button',
-        'button[data-variant="secondary"]',
-        'button[data-purpose="default"]',
-        'button',
-        '[role="button"]',
-        '[class*="button"]',
-        '[class*="kiro-button"]',
-        '[onclick]',
-        '.retry-button',
-        '.btn-retry',
-      ],
-  
-      // Kiro Snackbar Run按鈕選擇器 - 針對具體HTML結構優化
-      kiroSnackbarRun: [
-        // 精確匹配用戶提供的結構 - Run按鈕特徵
-        '.kiro-snackbar-actions button.kiro-button[data-variant="primary"][data-purpose="alert"]',
-        '.kiro-snackbar-actions button.kiro-button[data-variant="primary"]',
-        '.kiro-snackbar-actions button[data-variant="primary"][data-purpose="alert"]',
-        '.kiro-snackbar-actions button[data-variant="primary"]',
-        // 容器內搜尋
-        '.kiro-snackbar .kiro-button[data-variant="primary"]',
-        '.kiro-snackbar-actions button.kiro-button',
-        '.kiro-snackbar-actions button',
-        '.kiro-snackbar button[data-purpose="alert"]',
-        '.kiro-snackbar button.kiro-button',
-        // 通用備選方案
-        'button.kiro-button[data-variant="primary"]',
-        'button[data-variant="primary"]',
-      ],
-  
-      // Kiro Snackbar容器選擇器 - 增強檢測能力
-      kiroSnackbarContainer: [
-        '.kiro-snackbar',
-        '.kiro-snackbar-container',
-        '.kiro-snackbar-container.needs-attention',
-        'div.kiro-snackbar',
-        'div[class*="kiro-snackbar"]',
-        '[class*="snackbar"]',
-      ],
-  
-      // 點擊驗證選擇器 - 更精確的等待文字檢測
-      waitingText: [
-        '.thinking-text[data-is-thinking="true"]',
-        '.kiro-snackbar-title .thinking-text[data-is-thinking="true"]',
-        '.thinking-text',
-        '.kiro-snackbar-title',
-        '[data-is-thinking="true"]',
-        '[data-is-thinking]',
-      ],
-  
-      // 需要注意的容器選擇器
-      needsAttentionContainer: [
-        '.kiro-snackbar-container.needs-attention',
-        '.needs-attention',
-        '[class*="needs-attention"]',
-      ]
-    };
-  
-    /**
-     * 🎯 按鈕模式配置 - 支援語義化識別 (Enhanced with precise patterns)
-     */
-    const BUTTON_PATTERNS = {
-      retry: {
-        keywords: ['retry', 'retry button', '重試', '重新嘗試', '再試一次', '重新執行'],
-        priority: 1,
-        extraTime: 2000,
-        // 精確屬性匹配
-        attributes: {
-          'data-variant': 'secondary',
-          'data-purpose': 'default'
-        }
-      },
-      kiroSnackbarRun: {
-        keywords: ['run', 'run button', '執行', '運行', '執行按鈕'],
-        priority: 2,
-        extraTime: 1000,
-        // 精確屬性匹配
-        attributes: {
-          'data-variant': 'primary',
-          'data-purpose': 'alert'
-        }
-      },
-      trust: {
-        keywords: ['trust', 'trust button', '信任', '信任按鈕'],
-        priority: 3,
-        extraTime: 500,
-        attributes: {
-          'data-variant': 'secondary',
-          'data-purpose': 'alert'
-        }
-      },
-      reject: {
-        keywords: ['reject', 'reject button', '拒絕', '拒絕按鈕'],
-        priority: 4,
-        extraTime: 500,
-        attributes: {
-          'data-variant': 'tertiary',
-          'data-purpose': 'alert'
-        }
-      },
-    };
 
-
-
-    /**
-     * 🎯 目標定義與選擇器備案 - 完全採用用戶測試腳本 v2.1.1 的邏輯
-     * 使用 querySelectorAll 搜索邏輯，避免遺漏目標
-     */
-    const TARGET_DEFINITIONS = [
-      {
-        name: 'Run Button',
-        selectors: [
-          'div.kiro-snackbar button.kiro-button[data-variant="primary"][data-purpose="alert"]',
-          'div.kiro-snackbar-actions button[data-variant="primary"]'
-        ],
-        validate: (element) => element.textContent.trim() === 'Run'
-      },
-      {
-        name: 'Retry Button',
-        selectors: [
-          'div.kiro-chat-message-body button.kiro-button[data-variant="secondary"][data-purpose="default"]',
-          'button.kiro-button[data-variant="secondary"]'
-        ],
-        validate: (element) => element.textContent.trim() === 'Retry'
-      }
-    ];
-
-    /**
-     * 檢查一個元素是否在畫面上可見且可點擊 - 完全採用用戶測試腳本邏輯
-     */
-    function isElementReady(element) {
-      if (!element) return false;
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return (
-        style.display !== 'none' &&
-        style.visibility !== 'hidden' &&
-        style.opacity > 0 &&
-        rect.width > 0 &&
-        rect.height > 0 &&
-        !element.disabled &&
-        !element.hasAttribute('disabled')
-      );
-    }
-
-    /**
-     * 主函式：遍歷所有目標定義，使用 querySelectorAll 尋找並點擊 - 完全採用用戶測試腳本邏輯
-     */
-    function findTargetByDefinitions() {
-      for (const target of TARGET_DEFINITIONS) {
-        for (const selector of target.selectors) {
-          const foundElements = document.querySelectorAll(selector);
-          for (const element of foundElements) {
-            if (isElementReady(element) && (!target.validate || target.validate(element))) {
-              return { element: element, type: target.name };
-            }
-          }
-        }
-      }
-      return null;
-    }
-  
-    /**
-     * 🔍 彈性元素查找器 - 解決頁面結構耦合問題
-     */
-    class ElementFinder {
-      constructor() {
-        this.cache = new Map();
-        this.cacheTimeout = 5000; // 5秒快取
-      }
-  
-      /**
-       * 使用多重選擇器策略查找元素
-       */
-      findElement(selectors, context = document) {
-        const cacheKey = selectors.join('|') + (context !== document ? context.className : '');
-        const cached = this.cache.get(cacheKey);
-  
-        if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-          // 檢查快取元素是否仍然有效
-          if (this.isElementValid(cached.element)) {
-            return cached.element;
-          } else {
-            // 移除無效快取
-            this.cache.delete(cacheKey);
-          }
-        }
-  
-        for (const selector of selectors) {
-          try {
-            const element = context.querySelector(selector);
-            if (element && this.isElementVisible(element)) {
-              this.cache.set(cacheKey, { element, timestamp: Date.now() });
-              return element;
-            }
-          } catch (error) {
-            console.warn(`[ElementFinder] 選擇器失效: ${selector}`, error);
-          }
-        }
-  
-        return null;
-      }
-  
-      /**
-       * 查找所有匹配元素
-       */
-      findElements(selectors, context = document) {
-        const elements = [];
-  
-        for (const selector of selectors) {
-          try {
-            const found = context.querySelectorAll(selector);
-            elements.push(...Array.from(found).filter(el => this.isElementVisible(el)));
-          } catch (error) {
-            console.warn(`[ElementFinder] 選擇器失效: ${selector}`, error);
-          }
-        }
-  
-        return elements;
-      }
-  
-      /**
-       * 語義化按鈕識別 (Enhanced with broader element detection)
-       */
-      findButtonsBySemantics(context = document) {
-        const buttons = [];
-        const processedElements = new Set(); // 防止重複處理
-  
-        // 使用多種策略查找可點擊元素 - 擴展支援更多變體
-        const clickableSelectors = [
-          // 標準按鈕元素
-          'button',
-          'div[role="button"]',
-          'span[role="button"]',
-          'a[role="button"]',
-          // 事件監聽器元素
-          'div[onclick]',
-          'span[onclick]',
-          '[onclick]',
-          // 樣式指示器
-          'div[style*="cursor: pointer"]',
-          'div[style*="cursor:pointer"]',
-          'span[style*="cursor: pointer"]',
-          'span[style*="cursor:pointer"]',
-          // CSS類別匹配
-          '[class*="button"]',
-          '[class*="btn"]',
-          '[class*="kiro-button"]',
-          // 數據屬性
-          '[data-variant]',
-          '[data-purpose]',
-          '[data-testid*="button"]',
-          // Kiro特定選擇器
-          '.kiro-button',
-          '.kiro-snackbar-actions > *',
-        ];
-  
-        const clickableElements = this.findElements(clickableSelectors, context);
-  
-        for (const element of clickableElements) {
-          // 使用元素的唯一標識防止重複處理
-          const elementKey = this.getElementKey(element);
-          if (processedElements.has(elementKey)) {
-            continue;
-          }
-          processedElements.add(elementKey);
-  
-          const buttonType = this.identifyButtonType(element);
-          if (buttonType) {
-            buttons.push({ element, type: buttonType });
-          }
-        }
-  
-        return buttons;
-      }
-  
-      /**
-       * 獲取元素的唯一標識符
-       */
-      getElementKey(element) {
-        if (!element) return null;
-        
-        const text = element.textContent?.trim() || '';
-        const className = this.getElementClassName(element);
-        const tagName = element.tagName || '';
-        const dataVariant = element.getAttribute('data-variant') || '';
-        const dataPurpose = element.getAttribute('data-purpose') || '';
-        
-        try {
-          const rect = element.getBoundingClientRect();
-          const position = { x: Math.round(rect.x), y: Math.round(rect.y) };
-          return `${tagName}-${className}-${dataVariant}-${dataPurpose}-${text.substring(0, 20)}-${position.x}-${position.y}`;
-        } catch {
-          return `${tagName}-${className}-${dataVariant}-${dataPurpose}-${text.substring(0, 20)}-0-0`;
-        }
-      }
-  
-      /**
-       * 識別按鈕類型 (Enhanced with precise attribute matching)
-       */
-      identifyButtonType(element) {
-        const text = element.textContent?.toLowerCase().trim() || '';
-        const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
-        const title = element.getAttribute('title')?.toLowerCase() || '';
-        const className = this.getElementClassName(element).toLowerCase();
-        const dataVariant = element.getAttribute('data-variant')?.toLowerCase() || '';
-        const dataPurpose = element.getAttribute('data-purpose')?.toLowerCase() || '';
-        const dataActive = element.getAttribute('data-active')?.toLowerCase() || '';
-        const dataLoading = element.getAttribute('data-loading')?.toLowerCase() || '';
-        const searchText = `${text} ${ariaLabel} ${title} ${className} ${dataVariant} ${dataPurpose}`;
-  
-        // 按優先級排序處理
-        const sortedPatterns = Object.entries(BUTTON_PATTERNS).sort((a, b) => a[1].priority - b[1].priority);
-        
-        for (const [type, config] of sortedPatterns) {
-          // 首先檢查屬性匹配（更精確）
-          if (config.attributes) {
-            let attributeMatches = true;
-            for (const [attrName, expectedValue] of Object.entries(config.attributes)) {
-              const actualValue = element.getAttribute(attrName)?.toLowerCase() || '';
-              if (actualValue !== expectedValue.toLowerCase()) {
-                attributeMatches = false;
-                break;
-              }
-            }
-            
-            // 如果屬性匹配，再檢查關鍵字
-            if (attributeMatches) {
-              for (const keyword of config.keywords) {
-                if (searchText.includes(keyword.toLowerCase())) {
-                  // 進一步檢查按鈕狀態（不應該正在加載或不可用）
-                  if (dataLoading === 'true' || dataActive === 'false' && type === 'retry') {
-                    continue; // 跳過加載中或非活動的按鈕
-                  }
-                  return type;
-                }
-              }
-            }
-          } else {
-            // 如果沒有屬性定義，使用原始的關鍵字匹配
-            for (const keyword of config.keywords) {
-              if (searchText.includes(keyword.toLowerCase())) {
-                return type;
-              }
-            }
-          }
-        }
-  
-        return null;
-      }
-  
-      /**
-       * 檢查元素可見性 (參考極簡腳本的 isElementReady 邏輯)
-       */
-      isElementVisible(element) {
-        if (!element) return false;
-  
-        const style = window.getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-  
-        return (
-          style.display !== 'none' &&
-          style.visibility !== 'hidden' &&
-          parseFloat(style.opacity) > 0 &&
-          rect.width > 0 &&
-          rect.height > 0
-        );
-      }
-  
-      /**
-       * 檢查元素可點擊性 (參考極簡腳本的 isElementReady 邏輯)
-       */
-      isElementClickable(element) {
-        if (!element) return false;
-  
-        const style = window.getComputedStyle(element);
-        return (
-          style.pointerEvents !== 'none' &&
-          !element.disabled &&
-          !element.hasAttribute('disabled') &&
-          element.getAttribute('aria-disabled') !== 'true'
-        );
-      }
-  
-      /**
-       * 檢查元素是否準備就緒 (參考極簡腳本的完整檢查邏輯)
-       */
-      isElementReady(element) {
-        if (!element) return false;
-  
-        const style = window.getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-  
-        return (
-          style.display !== 'none' &&
-          style.visibility !== 'hidden' &&
-          style.opacity > 0 &&
-          rect.width > 0 &&
-          rect.height > 0 &&
-          !element.disabled &&
-          !element.hasAttribute('disabled')
-        );
-      }
-  
-      /**
-       * 檢查元素是否仍然有效
-       */
-      isElementValid(element) {
-        return (
-          element &&
-          element.isConnected &&
-          document.contains(element) &&
-          this.isElementVisible(element)
-        );
-      }
-  
-      /**
-       * 清除快取
-       */
-      clearCache() {
-        this.cache.clear();
-      }
-  
-      /**
-       * 安全地獲取元素的類名字符串
-       */
-      getElementClassName(element) {
-        if (!element) return "";
-        
-        try {
-          // 處理不同類型的 className 屬性
-          if (typeof element.className === 'string') {
-            return element.className;
-          } else if (element.className && element.className.toString) {
-            // 處理 DOMTokenList 或其他對象
-            return element.className.toString();
-          } else if (element.classList) {
-            // 使用 classList 作為備選方案
-            return Array.from(element.classList).join(' ');
-          } else {
-            // 最後的備選方案
-            return element.getAttribute('class') || "";
-          }
-        } catch (error) {
-          console.warn('[ElementFinder] Error getting className:', error);
-          return "";
-        }
-      }
-    }
-  
-    /**
-     * 🔬 DOM 監視器 (Enhanced with improved relevance detection)
-     */
-    class DOMWatcher {
-      constructor(callback) {
-        this.callback = callback;
-        this.observer = null;
-        this.isWatching = false;
-        this.debounceTimer = null;
-        this.debounceDelay = 250; // 250ms 防抖 (參考極簡腳本優化響應速度)
-        this.lastRelevantChange = Date.now();
-        this.changeHistory = new Map(); // 追蹤變化歷史
-      }
-  
-      start() {
-        if (this.isWatching) return;
-  
-        this.observer = new MutationObserver((mutations) => {
-          this.handleMutations(mutations);
-        });
-  
-        // 擴展監視屬性，增加更多關鍵屬性
-        const config = {
-          childList: true,
-          subtree: true,
-          attributes: true,
-          attributeFilter: [
-            "class", 
-            "style", 
-            "data-active", 
-            "data-loading", 
-            "data-variant",
-            "data-purpose",
-            "data-is-thinking",
-            "disabled",
-            "aria-disabled",
-            "hidden",
-            "aria-hidden"
-          ],
-          characterData: true, // 監視文字內容變化
-        };
-  
-        this.observer.observe(document.body, config);
-        this.isWatching = true;
-        console.log("[DOMWatcher] 🔍 開始監視DOM變化 (Enhanced)");
-      }
-  
-      stop() {
-        if (this.observer) {
-          this.observer.disconnect();
-          this.observer = null;
-        }
-  
-        if (this.debounceTimer) {
-          clearTimeout(this.debounceTimer);
-          this.debounceTimer = null;
-        }
-  
-        this.isWatching = false;
-        console.log("[DOMWatcher] ⏹️ 停止監視DOM變化");
-      }
-  
-      handleMutations(mutations) {
-        let hasRelevantChanges = false;
-        let changeReason = '';
-  
-        for (const mutation of mutations) {
-          const relevantResult = this.isRelevantMutation(mutation);
-          if (relevantResult.isRelevant) {
-            hasRelevantChanges = true;
-            changeReason = relevantResult.reason;
-            break;
-          }
-        }
-  
-        if (hasRelevantChanges) {
-          this.lastRelevantChange = Date.now();
-          
-          // 記錄變化歷史
-          const changeKey = `${changeReason}-${Date.now()}`;
-          this.changeHistory.set(changeKey, {
-            timestamp: Date.now(),
-            reason: changeReason,
-            mutationCount: mutations.length
-          });
-          
-          // 清理過期的變化歷史（5秒）
-          this.cleanupChangeHistory();
-  
-          if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
-          }
-  
-          this.debounceTimer = setTimeout(() => {
-            this.callback(changeReason);
-          }, this.debounceDelay); // 使用 250ms 防抖延遲，參考極簡腳本
-        }
-      }
-  
-      /**
-       * 清理過期的變化歷史
-       */
-      cleanupChangeHistory() {
-        const now = Date.now();
-        const expireTime = 5000; // 5秒
-        
-        for (const [key, change] of this.changeHistory.entries()) {
-          if (now - change.timestamp > expireTime) {
-            this.changeHistory.delete(key);
-          }
-        }
-      }
-  
-      isRelevantMutation(mutation) {
-        const result = { isRelevant: false, reason: '' };
-        
-        if (mutation.type === "childList") {
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const contentResult = this.hasRelevantContent(node);
-              if (contentResult.isRelevant) {
-                result.isRelevant = true;
-                result.reason = `childList-${contentResult.type}`;
-                return result;
-              }
-            }
-          }
-        }
-  
-        if (mutation.type === "attributes") {
-          const target = mutation.target;
-          if (target.nodeType === Node.ELEMENT_NODE) {
-            const contentResult = this.hasRelevantContent(target);
-            if (contentResult.isRelevant) {
-              result.isRelevant = true;
-              result.reason = `attributes-${contentResult.type}-${mutation.attributeName}`;
-              return result;
-            }
-          }
-        }
-  
-        if (mutation.type === "characterData") {
-          const target = mutation.target;
-          const parentElement = target.parentElement;
-          if (parentElement) {
-            const contentResult = this.hasRelevantContent(parentElement);
-            if (contentResult.isRelevant) {
-              result.isRelevant = true;
-              result.reason = `characterData-${contentResult.type}`;
-              return result;
-            }
-          }
-        }
-  
-        return result;
-      }
-  
-      hasRelevantContent(element) {
-        const result = { isRelevant: false, type: '' };
-        
-        if (!element) return result;
-        
-        const text = element.textContent?.toLowerCase() || "";
-        const className = this.getElementClassName(element);
-        
-        // 檢查是否為 Retry 按鈕 - 更精確的檢測
-        const isRetryButton = (
-          text.includes("retry") ||
-          text.includes("重試") ||
-          text.includes("重新嘗試") ||
-          text.includes("再試一次") ||
-          className.includes("retry")
-        ) && (
-          className.includes("kiro-button") ||
-          element.hasAttribute("data-variant") ||
-          element.tagName === 'BUTTON'
-        );
-        
-        if (isRetryButton) {
-          result.isRelevant = true;
-          result.type = 'retry';
-          return result;
-        }
-        
-        // 檢查是否為 Kiro Snackbar 相關元素 - 更精確的檢測
-        const isKiroSnackbar = (
-          className.includes("kiro-snackbar") ||
-          className.includes("needs-attention") ||
-          className.includes("thinking-text") ||
-          element.hasAttribute("data-is-thinking")
-        );
-        
-        if (isKiroSnackbar) {
-          result.isRelevant = true;
-          result.type = 'snackbar';
-          return result;
-        }
-        
-        // 檢查 Snackbar 內的按鈕（Run/Trust/Reject）
-        const isSnackbarButton = (
-          className.includes("kiro-button") ||
-          element.hasAttribute("data-variant")
-        ) && (
-          text.includes("run") ||
-          text.includes("trust") ||
-          text.includes("reject") ||
-          text.includes("執行") ||
-          text.includes("信任") ||
-          text.includes("拒絕")
-        );
-        
-        if (isSnackbarButton) {
-          result.isRelevant = true;
-          result.type = 'snackbar-button';
-          return result;
-        }
-        
-        // 檢查等待輸入文字
-        const hasWaitingText = (
-          text.includes("waiting on your input") ||
-          text.includes("等待您的輸入") ||
-          element.hasAttribute("data-is-thinking")
-        );
-        
-        if (hasWaitingText) {
-          result.isRelevant = true;
-          result.type = 'waiting-text';
-          return result;
-        }
-        
-        // 檢查關鍵數據屬性
-        const hasRelevantAttributes = element.hasAttribute && (
-          element.hasAttribute("data-variant") ||
-          element.hasAttribute("data-purpose") ||
-          element.hasAttribute("data-active") ||
-          element.hasAttribute("data-loading") ||
-          element.hasAttribute("data-is-thinking")
-        );
-        
-        if (hasRelevantAttributes) {
-          result.isRelevant = true;
-          result.type = 'data-attributes';
-          return result;
-        }
-        
-        return result;
-      }
-  
-      /**
-       * 安全地獲取元素的類名字符串
-       */
-      getElementClassName(element) {
-        if (!element) return "";
-        
-        try {
-          // 處理不同類型的 className 屬性
-          if (typeof element.className === 'string') {
-            return element.className;
-          } else if (element.className && element.className.toString) {
-            // 處理 DOMTokenList 或其他對象
-            return element.className.toString();
-          } else if (element.classList) {
-            // 使用 classList 作為備選方案
-            return Array.from(element.classList).join(' ');
-          } else {
-            // 最後的備選方案
-            return element.getAttribute('class') || "";
-          }
-        } catch (error) {
-          console.warn('[DOMWatcher] Error getting className:', error);
-          return "";
-        }
-      }
-    }
-  
     /**
      * 🎪 主控制器類別 - KiroAssist智能助手
      */
@@ -992,16 +343,8 @@
         this.version = "3.2.4";
         this.isRunning = false;
         this.totalClicks = 0;
-        this.lastClickTime = 0;
-        this.minClickInterval = 2000; // 最小點擊間隔 2 秒
-        this.clickedButtons = new WeakSet(); // 追蹤已點擊的按鈕
-  
-        // 防重複點擊機制 (Enhanced with CursorAutoAccept patterns)
-        this.recentClicks = new Map(); // 記錄最近點擊的按鈕
-        this.clickCooldownPeriod = 3000; // 同一按鈕冷卻期 3 秒
-        this.processedElements = new WeakSet(); // 追蹤已處理的元素
-        this.isClickInProgress = false; // 點擊進行中標誌，防止並發點擊
-  
+        this.controlPanel = null;
+
         // 模組配置 - 可由用戶控制
         this.moduleConfig = {
           retryButton: {
@@ -1015,192 +358,145 @@
             description: "自動檢測Kiro通知欄並點擊Run按鈕"
           },
         };
-  
+
         // 統計資料
         this.moduleStats = {
           retryButton: 0,
           kiroSnackbar: 0,
         };
-  
-        // 初始化模組
-        this.elementFinder = new ElementFinder();
-        this.domWatcher = new DOMWatcher(() => this.checkAndClickButtons());
-        this.controlPanel = null;
-  
+        
         this.createControlPanel();
-        this.log("🚀 KiroAssist v3.2.4 已初始化 (完全採用用戶測試腳本邏輯)", "success");      }
-  
-      /**
-       * 檢查並點擊各種按鈕 (參考極簡腳本的統一檢測邏輯)
-       */
-      checkAndClickButtons() {
+        this.log("🚀 KiroAssist v3.2.5 已初始化 (極簡腳本邏輯)", "success");
+      }
+
+      start() {
+        if (this.isRunning) return;
+        
+        this.isRunning = true;
+        startObserver();
+        this.updateControlPanel();
+        this.log("已開始智能監控", "success");
+        
+        // 更新狀態圖標
+        const statusIcon = this.controlPanel.querySelector(".prc-status-icon");
+        while (statusIcon.firstChild) {
+          statusIcon.removeChild(statusIcon.firstChild);
+        }
+        statusIcon.appendChild(createSVGIcon('activity'));
+        statusIcon.classList.add("prc-pulse", "prc-glow");
+      }
+
+      stop() {
         if (!this.isRunning) return;
-  
-        try {
-          // 參考極簡腳本的統一檢測邏輯
-          this.detectAndClickTargets();
-        } catch (error) {
-          this.log(`執行時出錯：${error.message}`, "error");
-          console.error("[KiroAssist] 詳細錯誤:", error);
+        
+        this.isRunning = false;
+        stopObserver();
+        this.updateControlPanel();
+        this.log("已停止智能監控", "info");
+        
+        // 更新狀態圖標
+        const statusIcon = this.controlPanel.querySelector(".prc-status-icon");
+        while (statusIcon.firstChild) {
+          statusIcon.removeChild(statusIcon.firstChild);
         }
+        statusIcon.appendChild(createSVGIcon('clock'));
+        statusIcon.classList.remove("prc-pulse", "prc-glow");
       }
+
+      updateControlPanel() {
+        const statusText = this.controlPanel?.querySelector(".prc-status-text");
+        const statusSubtext = this.controlPanel?.querySelector(".prc-status-subtext");
+        const clicksNumber = this.controlPanel?.querySelector(".prc-clicks-number");
+        const startBtn = this.controlPanel?.querySelector(".prc-start-btn");
+        const stopBtn = this.controlPanel?.querySelector(".prc-stop-btn");
   
-            /**
-       * 統一檢測並點擊目標按鈕 - 完全採用用戶測試腳本 v2.1.1 邏輯
-       */
-      detectAndClickTargets() {
-        // 使用用戶測試腳本的邏輯：遍歷所有目標定義，使用 querySelectorAll 尋找並點擊
-        const target = findTargetByDefinitions();
-        if (target && isElementReady(target.element)) {
-          console.log(`[自動點擊器] 發現目標: "${target.type}"，執行點擊！`);
-          this.performSimpleClick(target.element, target.type);
-          this.log(`自動點擊: ${target.type}`, "success");
-          return;
+        if (statusText) {
+          statusText.textContent = this.isRunning ? "監控中" : "已停止";
+          statusText.className = `prc-status-text ${this.isRunning ? "running" : "stopped"}`;
         }
-      }
   
-
+        if (statusSubtext) {
+          const enabledCount = Object.values(this.moduleConfig).filter(m => m.enabled).length;
+          statusSubtext.textContent = this.isRunning 
+            ? `正在監控 ${enabledCount} 個模組` 
+            : "等待開始監控";
+        }
   
-            /**
-       * 執行簡單點擊 - 完全採用用戶測試腳本的簡潔邏輯
-       */
-      performSimpleClick(element, buttonType) {
-        const now = Date.now();
-        const elementKey = this.getElementKey(element);
-
-        // 基本的防重複點擊檢查
-        if (elementKey && this.recentClicks.has(elementKey)) {
-          const lastClickTime = this.recentClicks.get(elementKey);
-          if (now - lastClickTime < this.clickCooldownPeriod) {
-            return false;
+        if (clicksNumber) {
+          clicksNumber.textContent = this.totalClicks;
+          if (this.totalClicks > 0) {
+            clicksNumber.classList.add("prc-bounce");
+            setTimeout(() => clicksNumber.classList.remove("prc-bounce"), 600);
           }
         }
-
-        try {
-          // 記錄點擊
-          if (elementKey) {
-            this.recentClicks.set(elementKey, now);
-          }
-          this.lastClickTime = now;
-
-          // 直接點擊元素 - 採用用戶測試腳本的簡潔方式
-          element.click();
-
-          // 更新統計
-          this.totalClicks++;
-          const moduleKey = buttonType.includes('Run') ? 'kiroSnackbar' : 'retryButton';
-          if (this.moduleStats[moduleKey] !== undefined) {
-            this.moduleStats[moduleKey]++;
-          }
-
-          // 記錄日誌
-          this.log(`成功點擊 ${buttonType}`, "success");
-          this.updatePanelStatus();
-
-          return true;
-        } catch (error) {
-          console.error(`[KiroAssist] 點擊失敗:`, error);
-          this.log(`點擊 ${buttonType} 失敗: ${error.message}`, "error");
-          return false;
-        }
+  
+        if (startBtn) startBtn.disabled = this.isRunning;
+        if (stopBtn) stopBtn.disabled = !this.isRunning;
+        
+        // 更新模組統計
+        this.updateModuleStats();
       }
-  
-            /**
-       * 已移除：使用統一的 findTargetByDefinitions 入口，不再需要多重檢測邏輯
-       */
-  
+
       /**
-       * 按優先級排序按鈕
+       * 更新模組統計
        */
-      sortButtonsByPriority(buttons) {
-        return buttons.sort((a, b) => {
-          // 首先按模組優先級排序
-          if (a.priority !== b.priority) {
-            return a.priority - b.priority;
-          }
-          
-          // 然後按元素可見性和位置排序（越上方越優先）
-          try {
-            const rectA = a.button.getBoundingClientRect();
-            const rectB = b.button.getBoundingClientRect();
-            return rectA.top - rectB.top;
-          } catch {
-            return 0;
+      updateModuleStats() {
+        const moduleItems = this.controlPanel?.querySelectorAll(".prc-module-item");
+        if (!moduleItems) return;
+
+        Object.entries(this.moduleConfig).forEach(([moduleKey, moduleInfo], index) => {
+          const moduleItem = moduleItems[index];
+          if (moduleItem) {
+            const countElement = moduleItem.querySelector(".prc-module-count");
+            if (countElement) {
+              countElement.textContent = `已執行: ${this.moduleStats[moduleKey]}次`;
+            }
           }
         });
       }
-  
-      /**
-       * 清理過期的元素狀態記錄
-       */
-      cleanupExpiredElementStates() {
-        // 這裡可以加入更多的清理邏輯，例如檢查元素是否仍然存在於DOM中
-        const now = Date.now();
+
+      getStatus() {
+        return {
+          isRunning: this.isRunning,
+          totalClicks: this.totalClicks,
+          version: this.version
+        };
+      }
+
+      log(message, type = "info") {
+        console.log(`[KiroAssist] ${message}`);
         
-        // 清理長時間未使用的元素狀態
-        for (const [elementKey, clickTime] of this.recentClicks.entries()) {
-          if (now - clickTime > 30000) { // 30秒後清理
-            this.recentClicks.delete(elementKey);
-          }
+        const logContainer = this.controlPanel?.querySelector(".prc-log-container");
+        if (!logContainer) return;
+  
+        const logEntry = document.createElement("div");
+        logEntry.className = `prc-log-entry ${type}`;
+        
+        // 添加對應的圖標
+        let iconName = 'info';
+        if (type === 'success') iconName = 'checkCircle';
+        else if (type === 'error') iconName = 'xCircle';
+        else if (type === 'info') iconName = 'info';
+        
+        const typeIcon = createSVGIcon(iconName, 'prc-log-type-icon');
+        if (typeIcon) {
+          logEntry.appendChild(typeIcon);
+        }
+        
+        // 添加日誌文本
+        const logText = document.createElement("span");
+        logText.textContent = `${new Date().toLocaleTimeString()} ${message}`;
+        logEntry.appendChild(logText);
+  
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+  
+        // 保持最多 50 條日誌
+        while (logContainer.children.length > 50) {
+          logContainer.removeChild(logContainer.firstChild);
         }
       }
-  
-            /**
-       * 已移除：使用統一的 findTargetByDefinitions 入口，不再需要多重檢測邏輯
-       */
-  
-      /**
-       * 清理過期的點擊記錄
-       */
-      cleanupExpiredClicks() {
-        const now = Date.now();
-        for (const [elementKey, clickTime] of this.recentClicks.entries()) {
-          if (now - clickTime > this.clickCooldownPeriod) {
-            this.recentClicks.delete(elementKey);
-          }
-        }
-      }
-  
-      /**
-       * 產生元素的唯一標識符
-       */
-      getElementKey(element) {
-        if (!element) return null;
-  
-        // 使用元素的多種屬性來創建唯一標識
-        const text = element.textContent?.trim() || "";
-        const className = element.className || "";
-        const tagName = element.tagName || "";
-        const position = this.getElementPosition(element);
-  
-        return `${tagName}-${className}-${text.substring(0, 20)}-${position.x}-${position.y}`;
-      }
-  
-      /**
-       * 取得元素的位置資訊
-       */
-      getElementPosition(element) {
-        try {
-          const rect = element.getBoundingClientRect();
-          return { x: Math.round(rect.x), y: Math.round(rect.y) };
-        } catch {
-          return { x: 0, y: 0 };
-        }
-      }
-  
-            /**
-       * 已移除：複雜的驗證邏輯，採用用戶測試腳本的簡潔 isElementReady 檢查
-       */
-  
-            /**
-       * 已移除：所有複雜的驗證邏輯，採用用戶測試腳本的簡潔 isElementReady 檢查
-       */
-  
-            /**
-       * 已移除：所有複雜的點擊邏輯，採用用戶測試腳本的簡潔 element.click() 方式
-       */
-  
-  
+
       /**
        * 創建控制面板
        */
@@ -1216,7 +512,7 @@
         
         document.body.appendChild(this.controlPanel);
       }
-  
+
       /**
        * 創建面板結構
        */
@@ -1333,7 +629,7 @@
         stopBtn.appendChild(stopText);
         stopBtn.disabled = true;
         stopBtn.onclick = () => this.stop();
-  
+
         const settingsBtn = document.createElement("button");
         settingsBtn.className = "prc-action-btn prc-settings-btn";
         
@@ -1345,7 +641,7 @@
         settingsBtn.appendChild(settingsIcon);
         settingsBtn.appendChild(settingsText);
         settingsBtn.onclick = () => this.toggleSettings();
-  
+
         controlsSection.appendChild(startBtn);
         controlsSection.appendChild(stopBtn);
         controlsSection.appendChild(settingsBtn);
@@ -1479,7 +775,7 @@
         
         settingsPanel.appendChild(settingsHeader);
         settingsPanel.appendChild(settingsContent);
-  
+
         // 組裝內容
         content.appendChild(statusCard);
         content.appendChild(controlsSection);
@@ -1491,7 +787,7 @@
         this.controlPanel.appendChild(header);
         this.controlPanel.appendChild(content);
       }
-  
+
       /**
        * 添加面板樣式 - 專業App風格
        */
@@ -1854,7 +1150,7 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
           }
-  
+
           .prc-settings-btn {
             background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
             color: white;
@@ -1872,7 +1168,7 @@
             transform: none !important;
             box-shadow: none !important;
           }
-  
+
           /* ===== 設定面板 ===== */
           .prc-settings-panel {
             background: rgba(255, 255, 255, 0.02);
@@ -2172,6 +1468,13 @@
             color: rgba(255, 255, 255, 0.6);
             font-weight: 600;
           }
+
+          .prc-author-version {
+            font-size: 11px;
+            color: #8b5cf6;
+            font-weight: 600;
+            margin-top: 4px;
+          }
   
           .prc-author-link {
             display: flex;
@@ -2251,7 +1554,7 @@
   
         document.head.appendChild(style);
       }
-  
+
       /**
        * 設置面板事件
        */
@@ -2295,119 +1598,7 @@
           }
         });
       }
-  
-      /**
-       * 開始自動點擊
-       */
-      start() {
-        if (this.isRunning) return;
-  
-        this.isRunning = true;
-        this.domWatcher.start();
-        this.checkAndClickButtons(); // 立即檢查一次
-  
-        this.updatePanelStatus();
-        this.updateModuleStats();
-        this.log("已開始智能監控", "success");
-        
-        // 更新狀態圖標
-        const statusIcon = this.controlPanel.querySelector(".prc-status-icon");
-        while (statusIcon.firstChild) {
-          statusIcon.removeChild(statusIcon.firstChild);
-        }
-        statusIcon.appendChild(createSVGIcon('activity'));
-        statusIcon.classList.add("prc-pulse", "prc-glow");
-      }
-  
-      /**
-       * 停止自動點擊
-       */
-      stop() {
-        if (!this.isRunning) return;
-  
-        this.isRunning = false;
-        this.domWatcher.stop();
-  
-        this.updatePanelStatus();
-        this.log("已停止智能監控", "info");
-        
-        // 更新狀態圖標
-        const statusIcon = this.controlPanel.querySelector(".prc-status-icon");
-        while (statusIcon.firstChild) {
-          statusIcon.removeChild(statusIcon.firstChild);
-        }
-        statusIcon.appendChild(createSVGIcon('clock'));
-        statusIcon.classList.remove("prc-pulse", "prc-glow");
-      }
-  
-      /**
-       * 更新面板狀態
-       */
-      updatePanelStatus() {
-        const statusText = this.controlPanel?.querySelector(".prc-status-text");
-        const statusSubtext = this.controlPanel?.querySelector(".prc-status-subtext");
-        const clicksNumber = this.controlPanel?.querySelector(".prc-clicks-number");
-        const startBtn = this.controlPanel?.querySelector(".prc-start-btn");
-        const stopBtn = this.controlPanel?.querySelector(".prc-stop-btn");
-  
-        if (statusText) {
-          statusText.textContent = this.isRunning ? "監控中" : "已停止";
-          statusText.className = `prc-status-text ${this.isRunning ? "running" : "stopped"}`;
-        }
-  
-        if (statusSubtext) {
-          const enabledCount = Object.values(this.moduleConfig).filter(m => m.enabled).length;
-          statusSubtext.textContent = this.isRunning 
-            ? `正在監控 ${enabledCount} 個模組` 
-            : "等待開始監控";
-        }
-  
-        if (clicksNumber) {
-          clicksNumber.textContent = this.totalClicks;
-          if (this.totalClicks > 0) {
-            clicksNumber.classList.add("prc-bounce");
-            setTimeout(() => clicksNumber.classList.remove("prc-bounce"), 600);
-          }
-        }
-  
-        if (startBtn) startBtn.disabled = this.isRunning;
-        if (stopBtn) stopBtn.disabled = !this.isRunning;
-        
-        // 更新模組統計
-        this.updateModuleStats();
-      }
-  
-      /**
-       * 切換設定面板
-       */
-      toggleSettings() {
-        const settingsPanel = this.controlPanel?.querySelector(".prc-settings-panel");
-        if (!settingsPanel) return;
-  
-        const isVisible = settingsPanel.style.display !== "none";
-        settingsPanel.style.display = isVisible ? "none" : "block";
-        
-        this.log(`設定面板已${isVisible ? '隱藏' : '顯示'}`, "info");
-      }
-  
-      /**
-       * 更新模組統計
-       */
-      updateModuleStats() {
-        const moduleItems = this.controlPanel?.querySelectorAll(".prc-module-item");
-        if (!moduleItems) return;
-  
-        Object.entries(this.moduleConfig).forEach(([moduleKey, moduleInfo], index) => {
-          const moduleItem = moduleItems[index];
-          if (moduleItem) {
-            const countElement = moduleItem.querySelector(".prc-module-count");
-            if (countElement) {
-              countElement.textContent = `已執行: ${this.moduleStats[moduleKey]}次`;
-            }
-          }
-        });
-      }
-  
+
       /**
        * 切換最小化
        */
@@ -2437,84 +1628,41 @@
       showPanel() {
         this.controlPanel.style.display = "flex";
       }
-  
+
       /**
-       * 記錄日誌
+       * 切換設定面板
        */
-      log(message, type = "info") {
-        console.log(`[KiroAssist] ${message}`);
+      toggleSettings() {
+        const settingsPanel = this.controlPanel?.querySelector(".prc-settings-panel");
+        if (!settingsPanel) return;
+
+        const isVisible = settingsPanel.style.display !== "none";
+        settingsPanel.style.display = isVisible ? "none" : "block";
         
-        const logContainer = this.controlPanel?.querySelector(".prc-log-container");
-        if (!logContainer) return;
-  
-        const logEntry = document.createElement("div");
-        logEntry.className = `prc-log-entry ${type}`;
-        
-        // 添加對應的圖標
-        let iconName = 'info';
-        if (type === 'success') iconName = 'checkCircle';
-        else if (type === 'error') iconName = 'xCircle';
-        else if (type === 'info') iconName = 'info';
-        
-        const typeIcon = createSVGIcon(iconName, 'prc-log-type-icon');
-        if (typeIcon) {
-          logEntry.appendChild(typeIcon);
-        }
-        
-        // 添加日誌文本
-        const logText = document.createElement("span");
-        logText.textContent = `${new Date().toLocaleTimeString()} ${message}`;
-        logEntry.appendChild(logText);
-  
-        logContainer.appendChild(logEntry);
-        logContainer.scrollTop = logContainer.scrollHeight;
-  
-        // 保持最多 50 條日誌
-        while (logContainer.children.length > 50) {
-          logContainer.removeChild(logContainer.firstChild);
-        }
+        this.log(`設定面板已${isVisible ? '隱藏' : '顯示'}`, "info");
       }
-  
-      /**
-       * 獲取狀態
-       */
-      getStatus() {
-        return {
-          isRunning: this.isRunning,
-          totalClicks: this.totalClicks,
-          version: this.version,
-          moduleConfig: this.moduleConfig,
-          moduleStats: this.moduleStats,
-          enabledModules: Object.entries(this.moduleConfig)
-            .filter(([key, config]) => config.enabled)
-            .map(([key, config]) => config.name)
-        };
-      }
-  
-      
     }
-  
-        // 創建實例
+
+    // 創建實例
     const kiroAssist = new KiroAssist();
 
-    // 設定全域API
+    // 設定全域API (僅保留新版API)
     window.KiroAssist = kiroAssist;
     window.startKiroAssist = () => kiroAssist.start();
     window.stopKiroAssist = () => kiroAssist.stop();
     window.kiroAssistStatus = () => kiroAssist.getStatus();
-  
-    // 向後相容的API
-    window.AutoRetryClicker = kiroAssist;
-    window.startRetryClicker = () => kiroAssist.start();
-    window.stopRetryClicker = () => kiroAssist.stop();
-    window.retryClickerStatus = () => kiroAssist.getStatus();
-  
-    console.log("✨ KiroAssist v3.2.4 (智能助手專業版) 已載入！");
-    console.log("🎛️ 新API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
-    console.log("🔄 舊API: startRetryClicker(), stopRetryClicker(), retryClickerStatus() (向後相容)");
+
+    // 啟動腳本
+    if (document.body) {
+        startObserver();
+    } else {
+        window.addEventListener('DOMContentLoaded', startObserver);
+    }
+
+    console.log("✨ KiroAssist v3.2.5 (極簡腳本邏輯) 已載入！");
+    console.log("🎛️ API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
     console.log("👨‍💻 作者: threads:azlife_1224");
-    console.log("🎯 功能: 智能檢測Retry按鈕 + Kiro Snackbar自動點擊");
-    console.log("⚙️ 新增: 模組化設定面板，可獨立開關各功能");
-    console.log("🎨 採用專業App風格SVG圖標系統");
+    console.log("🎯 功能: 採用極簡腳本的 querySelectorAll 遍歷邏輯");
+    console.log("🚀 特色: 精確選擇器 + 專業控制面板");
       
-  })();
+})();
