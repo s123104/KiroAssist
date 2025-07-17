@@ -340,7 +340,7 @@
      */
     class KiroAssist {
       constructor() {
-        this.version = "3.2.4";
+        this.version = "3.2.5";
         this.isRunning = false;
         this.totalClicks = 0;
         this.controlPanel = null;
@@ -698,6 +698,12 @@
         
         authorLink.appendChild(linkIcon);
         authorLink.appendChild(linkText);
+  
+        // 版本號顯示
+        const authorVersion = document.createElement("div");
+        authorVersion.className = "prc-author-version";
+        authorVersion.textContent = "v3.2.5";
+        authorInfo.appendChild(authorVersion);
   
         authorInfo.appendChild(authorName);
         authorInfo.appendChild(authorPlatform);
