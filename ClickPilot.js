@@ -1,8 +1,8 @@
 /**
- * 📦 模組：KiroAssist v3.0.2 - 智能助手專業版
+ * 📦 模組：KiroAssist v3.0.3 - 智能助手專業版
  * 🕒 最後更新：2025-07-17T17:00:00+08:00
  * 🧑‍💻 作者：threads:azlife_1224
- * 🔢 版本：v3.0.2
+ * 🔢 版本：v3.0.3
  * 📝 摘要：智能檢測並自動點擊各種按鈕，提供完整的模組化功能
  *
  * 🎯 功能特色：
@@ -611,12 +611,17 @@
    */
   class KiroAssist {
     constructor() {
-      this.version = "4.0.0";
+      this.version = "3.0.3";
       this.isRunning = false;
       this.totalClicks = 0;
       this.lastClickTime = 0;
       this.minClickInterval = 2000; // 最小點擊間隔 2 秒
       this.clickedButtons = new WeakSet(); // 追蹤已點擊的按鈕
+
+      // 防重複點擊機制
+      this.recentClicks = new Map(); // 記錄最近點擊的按鈕
+      this.clickCooldownPeriod = 3000; // 同一按鈕冷卻期 3 秒
+      this.processedElements = new WeakSet(); // 追蹤已處理的元素
 
       // 模組配置 - 可由用戶控制
       this.moduleConfig = {
@@ -644,7 +649,7 @@
       this.controlPanel = null;
 
       this.createControlPanel();
-      this.log("🚀 KiroAssist v3.0.2 已初始化", "success");
+      this.log("🚀 KiroAssist v3.0.3 已初始化", "success");
     }
 
     /**
@@ -710,8 +715,11 @@
       // 首先檢查是否存在Kiro Snackbar容器
       const snackbarContainer = this.elementFinder.findElement(SELECTORS.kiroSnackbarContainer);
       if (!snackbarContainer) {
+        console.log("[KiroAssist] 未找到 Kiro Snackbar 容器");
         return [];
       }
+
+      console.log("[KiroAssist] 找到 Kiro Snackbar 容器:", snackbarContainer);
 
       // 檢查容器是否包含"Waiting on your input"文字
       const waitingText = this.elementFinder.findElement(SELECTORS.waitingText, snackbarContainer);
@@ -721,8 +729,11 @@
       const hasNeedsAttention = snackbarContainer.classList.contains('needs-attention') || 
                                snackbarContainer.querySelector('.needs-attention');
       
+      console.log("[KiroAssist] 檢查狀態 - hasWaitingText:", hasWaitingText, "hasNeedsAttention:", hasNeedsAttention);
+      
       // 如果沒有等待輸入的文字且不是需要注意的通知，就跳過
       if (!hasWaitingText && !hasNeedsAttention) {
+        console.log("[KiroAssist] 條件不滿足，跳過處理");
         return [];
       }
 
@@ -730,13 +741,18 @@
       const buttons = this.elementFinder.findButtonsBySemantics(snackbarContainer);
       const runButtons = buttons.filter(btn => btn.type === 'kiroSnackbarRun').map(btn => btn.element);
       
+      console.log("[KiroAssist] 語義化識別找到按鈕:", runButtons.length);
+      
       // 如果語義化識別沒有找到，使用傳統方法
       if (runButtons.length === 0) {
+        console.log("[KiroAssist] 使用傳統方法搜尋按鈕");
         const fallbackButtons = this.elementFinder.findElements(SELECTORS.kiroSnackbarRun, snackbarContainer);
-        return fallbackButtons.filter(btn => 
+        const filteredButtons = fallbackButtons.filter(btn => 
           btn.textContent?.toLowerCase().includes('run') &&
           btn.getAttribute('data-variant') === 'primary'
         );
+        console.log("[KiroAssist] 傳統方法找到按鈕:", filteredButtons.length);
+        return filteredButtons;
       }
       
       return runButtons;
@@ -1967,7 +1983,9 @@
       
       // 更新狀態圖標
       const statusIcon = this.controlPanel.querySelector(".prc-status-icon");
-      statusIcon.innerHTML = '';
+      while (statusIcon.firstChild) {
+        statusIcon.removeChild(statusIcon.firstChild);
+      }
       statusIcon.appendChild(createSVGIcon('activity'));
       statusIcon.classList.add("prc-pulse", "prc-glow");
     }
@@ -1986,7 +2004,9 @@
       
       // 更新狀態圖標
       const statusIcon = this.controlPanel.querySelector(".prc-status-icon");
-      statusIcon.innerHTML = '';
+      while (statusIcon.firstChild) {
+        statusIcon.removeChild(statusIcon.firstChild);
+      }
       statusIcon.appendChild(createSVGIcon('clock'));
       statusIcon.classList.remove("prc-pulse", "prc-glow");
     }
@@ -2158,7 +2178,7 @@
   window.stopRetryClicker = () => kiroAssist.stop();
   window.retryClickerStatus = () => kiroAssist.getStatus();
 
-  console.log("✨ KiroAssist v3.0.2 (智能助手專業版) 已載入！");
+  console.log("✨ KiroAssist v3.0.3 (智能助手專業版) 已載入！");
   console.log("🎛️ 新API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
   console.log("🔄 舊API: startRetryClicker(), stopRetryClicker(), retryClickerStatus() (向後相容)");
   console.log("👨‍💻 作者: threads:azlife_1224");
