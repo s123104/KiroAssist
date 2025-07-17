@@ -1,8 +1,8 @@
 /**
- * 📦 模組：KiroAssist v3.1.1 - 智能助手專業版
+ * 📦 模組：KiroAssist v3.1.2 - 智能助手專業版
  * 🕒 最後更新：2025-07-17T17:00:00+08:00
  * 🧑‍💻 作者：threads:azlife_1224
- * 🔢 版本：v3.1.1
+ * 🔢 版本：v3.1.2
  * 📝 摘要：智能檢測並自動點擊各種按鈕，提供完整的模組化功能
  *
  * 🎯 功能特色：
@@ -548,7 +548,7 @@
     }
 
     /**
-     * 檢查元素可見性
+     * 檢查元素可見性 (參考極簡腳本的 isElementReady 邏輯)
      */
     isElementVisible(element) {
       if (!element) return false;
@@ -559,14 +559,14 @@
       return (
         style.display !== 'none' &&
         style.visibility !== 'hidden' &&
-        parseFloat(style.opacity) > 0.1 &&
+        parseFloat(style.opacity) > 0 &&
         rect.width > 0 &&
         rect.height > 0
       );
     }
 
     /**
-     * 檢查元素可點擊性
+     * 檢查元素可點擊性 (參考極簡腳本的 isElementReady 邏輯)
      */
     isElementClickable(element) {
       if (!element) return false;
@@ -577,6 +577,26 @@
         !element.disabled &&
         !element.hasAttribute('disabled') &&
         element.getAttribute('aria-disabled') !== 'true'
+      );
+    }
+
+    /**
+     * 檢查元素是否準備就緒 (參考極簡腳本的完整檢查邏輯)
+     */
+    isElementReady(element) {
+      if (!element) return false;
+
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity > 0 &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        !element.disabled &&
+        !element.hasAttribute('disabled')
       );
     }
 
@@ -635,7 +655,7 @@
       this.observer = null;
       this.isWatching = false;
       this.debounceTimer = null;
-      this.debounceDelay = 300; // 300ms 防抖 (優化響應速度)
+      this.debounceDelay = 250; // 250ms 防抖 (參考極簡腳本優化響應速度)
       this.lastRelevantChange = Date.now();
       this.changeHistory = new Map(); // 追蹤變化歷史
     }
@@ -721,7 +741,7 @@
 
         this.debounceTimer = setTimeout(() => {
           this.callback(changeReason);
-        }, this.debounceDelay);
+        }, this.debounceDelay); // 使用 250ms 防抖延遲，參考極簡腳本
       }
     }
 
@@ -906,7 +926,7 @@
    */
   class KiroAssist {
     constructor() {
-      this.version = "3.1.1";
+      this.version = "3.1.2";
       this.isRunning = false;
       this.totalClicks = 0;
       this.lastClickTime = 0;
@@ -945,7 +965,7 @@
       this.controlPanel = null;
 
       this.createControlPanel();
-      this.log("🚀 KiroAssist v3.1.1 已初始化", "success");
+      this.log("🚀 KiroAssist v3.1.2 已初始化 (參考極簡腳本優化)", "success");
     }
 
     /**
@@ -1072,10 +1092,22 @@
     }
 
     /**
-     * 尋找Kiro Snackbar Run按鈕
+     * 尋找Kiro Snackbar Run按鈕 (參考極簡腳本的精確選擇器邏輯)
      */
     findKiroSnackbarRunButtons() {
-      // 首先檢查是否存在Kiro Snackbar容器
+      // 使用精確的選擇器找到目標按鈕 (參考極簡腳本)
+      // - 在 'div.kiro-snackbar' 容器內
+      // - 尋找 'button.kiro-button'
+      // - 該按鈕的 data-variant 屬性為 'primary'
+      const runButton = document.querySelector('div.kiro-snackbar button.kiro-button[data-variant="primary"]');
+      
+      // 檢查按鈕是否存在，文字是否為 "Run"，且是否準備就緒
+      if (runButton && runButton.textContent.trim() === 'Run' && this.elementFinder.isElementReady(runButton)) {
+        console.log("[KiroAssist] 偵測到精確的 'Run' 按鈕");
+        return [runButton];
+      }
+
+      // 如果精確選擇器沒找到，回退到原有邏輯
       const snackbarContainer = this.elementFinder.findElement(SELECTORS.kiroSnackbarContainer);
       if (!snackbarContainer) {
         console.log("[KiroAssist] 未找到 Kiro Snackbar 容器");
@@ -2857,7 +2889,7 @@
   window.stopRetryClicker = () => kiroAssist.stop();
   window.retryClickerStatus = () => kiroAssist.getStatus();
 
-  console.log("✨ KiroAssist v3.1.1 (智能助手專業版) 已載入！");
+  console.log("✨ KiroAssist v3.1.2 (智能助手專業版) 已載入！");
   console.log("🎛️ 新API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
   console.log("🔄 舊API: startRetryClicker(), stopRetryClicker(), retryClickerStatus() (向後相容)");
   console.log("👨‍💻 作者: threads:azlife_1224");
