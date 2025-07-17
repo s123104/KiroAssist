@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![KiroAssist Logo](https://img.shields.io/badge/KiroAssist-v4.0.0-blueviolet?style=for-the-badge&logo=javascript)
+![KiroAssist Logo](https://img.shields.io/badge/KiroAssist-v3.1.0-blueviolet?style=for-the-badge&logo=javascript)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Kiro Compatible](https://img.shields.io/badge/Kiro-Compatible-9945FF?style=for-the-badge)](https://kiro.dev/)
@@ -172,24 +172,27 @@ const status = retryClickerStatus();
 
 ### 主類別 API
 
-#### `AutoRetryClicker`
+#### `KiroAssist`
 主控制器類別
 
 ```javascript
-const clicker = window.AutoRetryClicker;
+const assistant = window.KiroAssist;
 
 // 屬性
-clicker.version          // 版本號
-clicker.isRunning        // 運行狀態
-clicker.totalClicks      // 總點擊數
-clicker.minClickInterval // 最小點擊間隔（毫秒）
+assistant.version          // 版本號
+assistant.isRunning        // 運行狀態
+assistant.totalClicks      // 總點擊數
+assistant.minClickInterval // 最小點擊間隔（毫秒）
+assistant.moduleConfig     // 模組配置
+assistant.moduleStats      // 模組統計
 
 // 方法
-clicker.start()          // 開始監控
-clicker.stop()           // 停止監控
-clicker.getStatus()      // 獲取狀態
-clicker.showPanel()      // 顯示面板
-clicker.hidePanel()      // 隱藏面板
+assistant.start()          // 開始監控
+assistant.stop()           // 停止監控
+assistant.getStatus()      // 獲取狀態
+assistant.showPanel()      // 顯示面板
+assistant.hidePanel()      // 隱藏面板
+assistant.log(msg, type)   // 添加日誌
 ```
 
 ---
@@ -225,9 +228,11 @@ const config = {
   subtree: true,          // 監控整個子樹
   attributes: true,       // 監控屬性變化
   attributeFilter: [      // 監控特定屬性
-    "class", "style", "data-active", 
-    "data-loading", "disabled"
-  ]
+    "class", "style", "data-active", "data-loading", 
+    "data-variant", "data-purpose", "data-is-thinking",
+    "disabled", "aria-disabled", "hidden", "aria-hidden"
+  ],
+  characterData: true     // 監控文字內容變化
 };
 ```
 

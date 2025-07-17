@@ -1,27 +1,92 @@
 # 📚 KiroAssist API 文檔
 
-本文檔詳細說明 KiroAssist v4.0.0 智能助手的所有 API 接口和使用方法。
+本文檔詳細說明 KiroAssist v3.1.0 智能助手的所有 API 接口和使用方法。
 
-## 🆕 v4.0.0 新功能
+## 🆕 v3.1.0 新功能
 
-- **模組化功能設定**：支援獨立控制不同功能模組
-- **智能按鈕檢測**：新增 Kiro Snackbar 自動點擊功能
-- **語義化識別**：使用語義分析識別按鈕類型
-- **彈性選擇器**：降低頁面結構耦合，提高相容性
-- **統計分析**：分模組統計點擊次數
+- **增強的彈性選擇器**：更精確的按鈕檢測，支援 `data-variant` 和 `data-purpose` 屬性匹配
+- **改進的 DOM 監控**：新增 `characterData` 監控和更多關鍵屬性追蹤
+- **優化的防重複機制**：使用 WeakSet 和 Map 進行更高效的狀態管理
+- **語義化按鈕識別**：基於屬性和內容的智能按鈕類型識別
+- **模組化統計系統**：獨立追蹤各模組的點擊次數和效果
+- **SVG 圖標系統**：純 DOM API 創建的專業圖標庫
+- **增強的錯誤處理**：更完善的異常捕獲和恢復機制
 
 ## 🎯 支援的功能模組
 
-### 1. Retry 按鈕模組
+### 1. Retry 按鈕模組 (`retryButton`)
 - **功能**：自動檢測並點擊 Retry 重試按鈕
-- **支援格式**：英文 "Retry"、中文 "重試"、"重新嘗試"
+- **支援格式**：
+  - 英文：`"Retry"`、`"retry button"`
+  - 中文：`"重試"`、`"重新嘗試"`、`"再試一次"`
 - **優先級**：1（最高）
+- **額外等待時間**：2000ms
 
-### 2. Kiro Snackbar 模組
+### 2. Kiro Snackbar 模組 (`kiroSnackbar`)
 - **功能**：自動檢測 Kiro 通知欄並點擊 Run 按鈕
-- **觸發條件**：出現 "Waiting on your input" 文字或 "needs-attention" 類別
-- **支援格式**：Run、Trust、Reject 按鈕
+- **觸發條件**：
+  - 出現 "Waiting on your input" 文字
+  - 容器具有 "needs-attention" 類別
+- **支援格式**：
+  - 英文：`"Run"`、`"run button"`
+  - 中文：`"執行"`、`"運行"`
 - **優先級**：2
+- **額外等待時間**：1000ms
+
+### 3. Trust 按鈕模組 (`trust`)
+- **功能**：自動檢測並點擊 Trust 信任按鈕
+- **支援格式**：
+  - 英文：`"Trust"`、`"trust button"`
+  - 中文：`"信任"`
+- **優先級**：3
+- **額外等待時間**：500ms
+
+### 3. Trust 按鈕模組 (`trust`)
+- **功能**：自動檢測並點擊 Trust 信任按鈕
+- **支援格式**：
+  - 英文：`"Trust"`、`"trust button"`
+  - 中文：`"信任"`
+- **優先級**：3
+- **額外等待時間**：500ms
+
+### 4. Reject 按鈕模組 (`reject`)
+- **功能**：自動檢測並點擊 Reject 拒絕按鈕
+- **支援格式**：
+  - 英文：`"Reject"`、`"reject button"`
+  - 中文：`"拒絕"`
+- **優先級**：4
+- **額外等待時間**：500ms
+
+## 🏗️ 核心架構
+
+### ElementFinder 類別
+彈性元素查找器，解決頁面結構耦合問題：
+
+```javascript
+const finder = new ElementFinder();
+
+// 查找單個元素
+const element = finder.findElement(selectors, context);
+
+// 查找多個元素
+const elements = finder.findElements(selectors, context);
+
+// 語義化按鈕識別
+const buttons = finder.findButtonsBySemantics(context);
+```
+
+### DOMWatcher 類別
+DOM 變化監控器：
+
+```javascript
+const watcher = new DOMWatcher(callback);
+
+// 開始監控
+watcher.start();
+
+// 停止監控
+watcher.stop();
+```
 
 ## 🌐 全域 API
 
@@ -108,16 +173,40 @@ console.log(`版本: ${status.version}`);
 
 ## 🎛️ 主類別 API
 
-### `AutoRetryClicker` 類別
+### `KiroAssist` 類別
 
-主控制器類別，可通過 `window.AutoRetryClicker` 訪問。
+主控制器類別，可通過 `window.KiroAssist` 訪問。
+
+#### 模組配置
+
+##### `moduleConfig`
+```javascript
+const config = window.KiroAssist.moduleConfig;
+
+// 查看模組配置
+console.log(config.retryButton.enabled);    // Retry按鈕模組是否啟用
+console.log(config.kiroSnackbar.enabled);   // Kiro Snackbar模組是否啟用
+
+// 動態控制模組
+config.retryButton.enabled = false;         // 停用Retry按鈕模組
+config.kiroSnackbar.enabled = true;         // 啟用Kiro Snackbar模組
+```
+
+##### `moduleStats`
+```javascript
+const stats = window.KiroAssist.moduleStats;
+
+// 查看各模組統計
+console.log(`Retry按鈕點擊次數: ${stats.retryButton}`);
+console.log(`Kiro Snackbar點擊次數: ${stats.kiroSnackbar}`);
+```
 
 #### 屬性
 
 ##### `version`
 ```javascript
-const version = window.AutoRetryClicker.version;
-// 返回: "3.0.1"
+const version = window.KiroAssist.version;
+// 返回: "3.1.0"
 ```
 - **類型**：`string`
 - **描述**：當前版本號
@@ -125,7 +214,7 @@ const version = window.AutoRetryClicker.version;
 
 ##### `isRunning`
 ```javascript
-const isRunning = window.AutoRetryClicker.isRunning;
+const isRunning = window.KiroAssist.isRunning;
 // 返回: true | false
 ```
 - **類型**：`boolean`
@@ -134,7 +223,7 @@ const isRunning = window.AutoRetryClicker.isRunning;
 
 ##### `totalClicks`
 ```javascript
-const totalClicks = window.AutoRetryClicker.totalClicks;
+const totalClicks = window.KiroAssist.totalClicks;
 // 返回: number
 ```
 - **類型**：`number`
@@ -144,10 +233,10 @@ const totalClicks = window.AutoRetryClicker.totalClicks;
 ##### `minClickInterval`
 ```javascript
 // 獲取當前間隔
-const interval = window.AutoRetryClicker.minClickInterval;
+const interval = window.KiroAssist.minClickInterval;
 
 // 設置新間隔（毫秒）
-window.AutoRetryClicker.minClickInterval = 3000; // 3秒
+window.KiroAssist.minClickInterval = 3000; // 3秒
 ```
 - **類型**：`number`
 - **描述**：最小點擊間隔（毫秒）
@@ -161,7 +250,7 @@ window.AutoRetryClicker.minClickInterval = 3000; // 3秒
 啟動自動監控。
 
 ```javascript
-window.AutoRetryClicker.start();
+window.KiroAssist.start();
 ```
 
 **參數**：無
@@ -179,7 +268,7 @@ window.AutoRetryClicker.start();
 停止自動監控。
 
 ```javascript
-window.AutoRetryClicker.stop();
+window.KiroAssist.stop();
 ```
 
 **參數**：無
@@ -197,7 +286,7 @@ window.AutoRetryClicker.stop();
 獲取詳細狀態信息。
 
 ```javascript
-const status = window.AutoRetryClicker.getStatus();
+const status = window.KiroAssist.getStatus();
 ```
 
 **參數**：無
@@ -216,7 +305,7 @@ const status = window.AutoRetryClicker.getStatus();
 顯示控制面板。
 
 ```javascript
-window.AutoRetryClicker.showPanel();
+window.KiroAssist.showPanel();
 ```
 
 **參數**：無
@@ -230,7 +319,7 @@ window.AutoRetryClicker.showPanel();
 隱藏控制面板。
 
 ```javascript
-window.AutoRetryClicker.hidePanel();
+window.KiroAssist.hidePanel();
 ```
 
 **參數**：無
@@ -244,7 +333,7 @@ window.AutoRetryClicker.hidePanel();
 切換面板最小化狀態。
 
 ```javascript
-window.AutoRetryClicker.toggleMinimize();
+window.KiroAssist.toggleMinimize();
 ```
 
 **參數**：無
@@ -260,7 +349,7 @@ window.AutoRetryClicker.toggleMinimize();
 添加日誌記錄。
 
 ```javascript
-window.AutoRetryClicker.log("自定義訊息", "info");
+window.KiroAssist.log("自定義訊息", "info");
 ```
 
 **參數**：
@@ -291,27 +380,28 @@ DOM 監控器類別，負責監控頁面變化。
 
 ### 按鈕檢測方法
 
-#### `findRetryButton()`
+#### `findRetryButtons()`
 
 尋找頁面上的 Retry 按鈕。
 
 ```javascript
-const button = window.AutoRetryClicker.findRetryButton();
+const buttons = window.KiroAssist.findRetryButtons();
 ```
 
-**返回值**：`HTMLElement | null`
+**返回值**：`HTMLElement[]`
 
 **檢測規則**：
 - 包含 "Retry"、"重試"、"重新嘗試" 等文字
 - 具有相關的 aria-label 或 title 屬性
 - 符合預定義的 CSS 選擇器
+- 使用語義化識別和屬性匹配
 
 #### `isElementVisible(element)`
 
 檢查元素是否可見。
 
 ```javascript
-const isVisible = window.AutoRetryClicker.isElementVisible(element);
+const isVisible = window.KiroAssist.elementFinder.isElementVisible(element);
 ```
 
 **參數**：
@@ -330,7 +420,7 @@ const isVisible = window.AutoRetryClicker.isElementVisible(element);
 檢查元素是否可點擊。
 
 ```javascript
-const isClickable = window.AutoRetryClicker.isElementClickable(element);
+const isClickable = window.KiroAssist.elementFinder.isElementClickable(element);
 ```
 
 **參數**：
@@ -412,14 +502,22 @@ document.addEventListener('clickpilot:statuschange', (event) => {
 ### 按鈕選擇器配置
 
 ```javascript
-// 獲取當前選擇器
-const selectors = window.AutoRetryClicker.RETRY_SELECTORS;
-
-// 添加自定義選擇器（需要修改源碼）
-const customSelectors = [
-  'button.my-retry-btn',
-  '[data-action="retry"]'
-];
+// 查看當前選擇器配置（在腳本源碼中的 SELECTORS 常數）
+// 包含多種彈性選擇器：
+const SELECTORS = {
+  retryButtons: [
+    'button.kiro-button[data-variant="secondary"][data-purpose="default"]',
+    'button.kiro-button[data-variant="secondary"]',
+    'button.kiro-button',
+    'button[data-variant="secondary"]',
+    // ... 更多選擇器
+  ],
+  kiroSnackbarRun: [
+    '.kiro-snackbar-actions button.kiro-button[data-variant="primary"][data-purpose="alert"]',
+    '.kiro-snackbar-actions button.kiro-button[data-variant="primary"]',
+    // ... 更多選擇器
+  ]
+};
 ```
 
 ### 監控配置
@@ -449,7 +547,7 @@ KiroAssist 會處理以下類型的錯誤：
 
 ```javascript
 try {
-  window.AutoRetryClicker.start();
+  window.KiroAssist.start();
 } catch (error) {
   console.error('KiroAssist 啟動失敗:', error);
   // 處理錯誤
@@ -459,11 +557,14 @@ try {
 ### 調試模式
 
 ```javascript
-// 啟用詳細日誌
-window.AutoRetryClicker.debugMode = true;
-
 // 查看內部狀態
-console.log(window.AutoRetryClicker);
+console.log(window.KiroAssist);
+
+// 查看模組配置
+console.log(window.KiroAssist.moduleConfig);
+
+// 查看統計資料
+console.log(window.KiroAssist.moduleStats);
 ```
 
 ## 📊 性能監控

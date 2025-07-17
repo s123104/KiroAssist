@@ -1,6 +1,14 @@
 # 🚀 KiroAssist 快速入門指南
 
-歡迎使用 KiroAssist！這份指南將幫助你在 5 分鐘內開始使用自動重試功能。
+歡迎使用 KiroAssist v3.1.0！這份指南將幫助你在 5 分鐘內開始使用智能助手的模組化自動化功能。
+
+## 🆕 v3.1.0 新功能亮點
+
+- **精確屬性匹配**：支援 `data-variant` 和 `data-purpose` 屬性的精確識別
+- **增強的 DOM 監控**：監控文字內容變化和更多關鍵屬性
+- **優化的性能**：使用 WeakSet 和元素快取提高效率
+- **智能按鈕識別**：基於語義和屬性的多層次按鈕檢測
+- **模組化統計**：獨立追蹤各功能模組的使用情況
 
 ## 📋 前置準備
 
@@ -190,7 +198,7 @@ console.log(status);
 
 - 點擊標題欄右側的「×」按鈕
 - 面板完全隱藏
-- 使用 `window.AutoRetryClicker.showPanel()` 重新顯示
+- 使用 `window.KiroAssist.showPanel()` 重新顯示
 
 ## ⚠️ 注意事項
 
@@ -235,7 +243,7 @@ console.log(status);
 **A**: 使用以下命令重新顯示：
 
 ```javascript
-window.AutoRetryClicker.showPanel();
+window.KiroAssist.showPanel();
 ```
 
 ### Q: 如何完全移除腳本？
@@ -243,8 +251,8 @@ window.AutoRetryClicker.showPanel();
 **A**: 重新整理頁面即可，或執行：
 
 ```javascript
-window.AutoRetryClicker.stop();
-delete window.AutoRetryClicker;
+window.KiroAssist.stop();
+delete window.KiroAssist;
 ```
 
 ## 📞 獲得幫助
