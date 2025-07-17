@@ -687,26 +687,34 @@
     /**
      * 尋找Retry按鈕
      */
-    findRetryButton() {
-      const button = this.findButtonBySelectors(BUTTON_SELECTORS.retry, "retry");
-      if (button) {
-        console.log("[KiroAssist] 找到 Retry 按鈕:", button);
+    findRetryButtons() {
+      const buttons = this.elementFinder.findButtonsBySemantics();
+      const retryButtons = buttons.filter(btn => btn.type === 'retry').map(btn => btn.element);
+      
+      // 如果語義化識別沒有找到，使用傳統方法
+      if (retryButtons.length === 0) {
+        const fallbackButtons = this.elementFinder.findElements(SELECTORS.retryButtons);
+        return fallbackButtons.filter(btn => 
+          btn.textContent?.toLowerCase().includes('retry') ||
+          btn.textContent?.toLowerCase().includes('重試')
+        );
       }
-      return button;
+      
+      return retryButtons;
     }
 
     /**
      * 尋找Kiro Snackbar Run按鈕
      */
-    findKiroSnackbarRunButton() {
+    findKiroSnackbarRunButtons() {
       // 首先檢查是否存在Kiro Snackbar容器
-      const snackbarContainer = this.findElementBySelectors(BUTTON_SELECTORS.kiroSnackbarContainer);
+      const snackbarContainer = this.elementFinder.findElement(SELECTORS.kiroSnackbarContainer);
       if (!snackbarContainer) {
-        return null;
+        return [];
       }
 
       // 檢查容器是否包含"Waiting on your input"文字
-      const waitingText = snackbarContainer.querySelector('.thinking-text[data-is-thinking="true"]');
+      const waitingText = this.elementFinder.findElement(SELECTORS.waitingText, snackbarContainer);
       const hasWaitingText = waitingText && waitingText.textContent.includes("Waiting on your input");
       
       // 也檢查是否包含"needs-attention"類別
@@ -715,123 +723,94 @@
       
       // 如果沒有等待輸入的文字且不是需要注意的通知，就跳過
       if (!hasWaitingText && !hasNeedsAttention) {
-        return null;
+        return [];
       }
 
       // 在容器內尋找Run按鈕
-      const button = this.findButtonBySelectors(BUTTON_SELECTORS.kiroSnackbarRun, "kiro-run", snackbarContainer);
-      if (button) {
-        console.log("[KiroAssist] 找到 Kiro Snackbar Run 按鈕:", button);
+      const buttons = this.elementFinder.findButtonsBySemantics(snackbarContainer);
+      const runButtons = buttons.filter(btn => btn.type === 'kiroSnackbarRun').map(btn => btn.element);
+      
+      // 如果語義化識別沒有找到，使用傳統方法
+      if (runButtons.length === 0) {
+        const fallbackButtons = this.elementFinder.findElements(SELECTORS.kiroSnackbarRun, snackbarContainer);
+        return fallbackButtons.filter(btn => 
+          btn.textContent?.toLowerCase().includes('run') &&
+          btn.getAttribute('data-variant') === 'primary'
+        );
       }
-      return button;
+      
+      return runButtons;
     }
 
     /**
-     * 通用按鈕查找方法
+     * 清理過期的點擊記錄
      */
-    findButtonBySelectors(selectors, logPrefix = "", context = document) {
-      for (const selector of selectors) {
-        try {
-          // 對於包含:contains的選擇器，需要手動檢查
-          if (selector.includes(':contains(')) {
-            const baseSelector = selector.split(':contains(')[0];
-            const containsText = selector.match(/:contains\("([^"]+)"\)/)?.[1];
-            
-            if (baseSelector && containsText) {
-              const elements = context.querySelectorAll(baseSelector);
-              for (const element of elements) {
-                const elementText = element.textContent?.trim().toLowerCase() || "";
-                const searchText = containsText.toLowerCase();
-                
-                // 支援更準確的文字匹配
-                if ((elementText.includes(searchText) || 
-                     elementText === searchText ||
-                     element.textContent?.trim() === containsText) &&
-                    this.isElementVisible(element) && 
-                    this.isElementClickable(element)) {
-                  return element;
-                }
-              }
-            }
-          } else {
-            const element = context.querySelector(selector);
-            if (element && 
-                this.isElementVisible(element) && 
-                this.isElementClickable(element)) {
-              return element;
-            }
-          }
-        } catch (error) {
-          console.warn(`[KiroAssist] 選擇器失效: ${selector}`, error);
-        }
-      }
-      return null;
-    }
-
-    /**
-     * 通用元素查找方法
-     */
-    findElementBySelectors(selectors, context = document) {
-      for (const selector of selectors) {
-        try {
-          const element = context.querySelector(selector);
-          if (element && this.isElementVisible(element)) {
-            return element;
-          }
-        } catch (error) {
-          console.warn(`[KiroAssist] 選擇器失效: ${selector}`, error);
-        }
-      }
-      return null;
-    }
-
-    /**
-     * 檢查元素是否可見
-     */
-    isElementVisible(element) {
-      if (!element) return false;
-
-      const style = window.getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-
-      return (
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        parseFloat(style.opacity) > 0.1 &&
-        rect.width > 0 &&
-        rect.height > 0
-      );
-    }
-
-    /**
-     * 檢查元素是否可點擊
-     */
-    isElementClickable(element) {
-      if (!element) return false;
-
-      const style = window.getComputedStyle(element);
-      return (
-        style.pointerEvents !== "none" &&
-        !element.disabled &&
-        !element.hasAttribute("disabled") &&
-        element.getAttribute("aria-disabled") !== "true" &&
-        element.getAttribute("data-loading") !== "true"
-      );
-    }
-
-    /**
-     * 檢查是否可以點擊按鈕
-     */
-    canClickButton(button) {
+    cleanupExpiredClicks() {
       const now = Date.now();
+      for (const [elementKey, clickTime] of this.recentClicks.entries()) {
+        if (now - clickTime > this.clickCooldownPeriod) {
+          this.recentClicks.delete(elementKey);
+        }
+      }
+    }
+
+    /**
+     * 產生元素的唯一標識符
+     */
+    getElementKey(element) {
+      if (!element) return null;
+
+      // 使用元素的多種屬性來創建唯一標識
+      const text = element.textContent?.trim() || "";
+      const className = element.className || "";
+      const tagName = element.tagName || "";
+      const position = this.getElementPosition(element);
+
+      return `${tagName}-${className}-${text.substring(0, 20)}-${position.x}-${position.y}`;
+    }
+
+    /**
+     * 取得元素的位置資訊
+     */
+    getElementPosition(element) {
+      try {
+        const rect = element.getBoundingClientRect();
+        return { x: Math.round(rect.x), y: Math.round(rect.y) };
+      } catch {
+        return { x: 0, y: 0 };
+      }
+    }
+
+    /**
+     * 檢查元素是否可以點擊
+     */
+    canClickElement(element, buttonType) {
+      if (!element || !buttonType) return false;
+
+      const now = Date.now();
+      const elementKey = this.getElementKey(element);
 
       // 檢查全域點擊間隔
       if (now - this.lastClickTime < this.minClickInterval) {
         return false;
       }
 
-      // 檢查是否已經點擊過這個按鈕
-      if (this.clickedButtons.has(button)) {
+      // 檢查元素是否已被處理過
+      if (this.processedElements.has(element)) {
+        return false;
+      }
+
+      // 檢查元素特定冷卻期
+      if (elementKey && this.recentClicks.has(elementKey)) {
+        const lastClickTime = this.recentClicks.get(elementKey);
+        if (now - lastClickTime < this.clickCooldownPeriod) {
+          return false;
+        }
+      }
+
+      // 檢查元素狀態
+      if (!this.elementFinder.isElementVisible(element) || 
+          !this.elementFinder.isElementClickable(element)) {
         return false;
       }
 
@@ -839,37 +818,43 @@
     }
 
     /**
-     * 通用點擊按鈕方法
+     * 點擊元素
      */
-    clickButton(button, moduleType, buttonName) {
+    clickElement(element, buttonType) {
       try {
         const now = Date.now();
-        
+        const elementKey = this.getElementKey(element);
+
         // 記錄點擊狀態
         this.lastClickTime = now;
-        this.clickedButtons.add(button);
-        
-        // 點擊按鈕
-        button.click();
-        
+        if (elementKey) {
+          this.recentClicks.set(elementKey, now);
+        }
+        this.processedElements.add(element);
+
+        // 點擊元素
+        element.click();
+
         // 更新統計
         this.totalClicks++;
-        this.moduleStats[moduleType]++;
-        
+        const moduleKey = buttonType === 'retry' ? 'retryButton' : 'kiroSnackbar';
+        this.moduleStats[moduleKey]++;
+
         this.updatePanelStatus();
-        this.log(`已自動點擊 ${buttonName} 按鈕 (#${this.totalClicks})`, "success");
+        this.log(`已自動點擊 ${buttonType} 按鈕 (#${this.totalClicks})`, "success");
 
         // 清除已點擊記錄（3秒後）
         setTimeout(() => {
-          this.clickedButtons.delete(button);
+          this.processedElements.delete(element);
         }, 3000);
 
         return true;
       } catch (error) {
-        this.log(`點擊${buttonName}失敗：${error.message}`, "error");
+        this.log(`點擊${buttonType}失敗：${error.message}`, "error");
         return false;
       }
     }
+
 
     /**
      * 創建控制面板
