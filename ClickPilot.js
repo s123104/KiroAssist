@@ -237,43 +237,251 @@
   }
 
   /**
-   * 🎯 按鈕檢測配置 - 支援多種按鈕類型
+   * 🎯 彈性選擇器配置 - 降低頁面結構耦合
    */
-  const BUTTON_SELECTORS = {
-    // Retry按鈕選擇器
-    retry: [
-      'button.kiro-button[data-variant="secondary"]:contains("Retry")',
-      'button.kiro-button:contains("Retry")',
-      'button[data-variant="secondary"]:contains("Retry")',
-      'button:contains("Retry")',
-      'button[aria-label*="retry" i]',
-      'button[title*="retry" i]',
-      '[role="button"]:contains("Retry")',
-      '[onclick*="retry" i]',
-      '.retry-button, .btn-retry',
-      'button:contains("重試")',
-      'button:contains("重新嘗試")',
-      'button:contains("再試一次")',
+  const SELECTORS = {
+    // 按鈕容器選擇器
+    buttonContainers: [
+      '.kiro-snackbar',
+      '.kiro-snackbar-container',
+      '.kiro-snackbar-actions',
+      'div[class*="kiro-snackbar"]',
     ],
-    
+
+    // Retry按鈕選擇器
+    retryButtons: [
+      'button.kiro-button[data-variant="secondary"]',
+      'button.kiro-button',
+      'button[data-variant="secondary"]',
+      'button',
+      '[role="button"]',
+      '[class*="button"]',
+      '[onclick]',
+      '.retry-button',
+      '.btn-retry',
+    ],
+
     // Kiro Snackbar Run按鈕選擇器
     kiroSnackbarRun: [
-      '.kiro-snackbar-actions button.kiro-button[data-variant="primary"]:contains("Run")',
-      '.kiro-snackbar-actions button[data-variant="primary"]:contains("Run")',
-      '.kiro-snackbar .kiro-button[data-variant="primary"]:contains("Run")',
-      '.kiro-snackbar-actions button:contains("Run")',
-      '.kiro-snackbar button[data-purpose="alert"]:contains("Run")',
-      '.kiro-snackbar button.kiro-button:contains("Run")',
+      '.kiro-snackbar-actions button.kiro-button[data-variant="primary"]',
+      '.kiro-snackbar-actions button[data-variant="primary"]',
+      '.kiro-snackbar .kiro-button[data-variant="primary"]',
+      '.kiro-snackbar-actions button',
+      '.kiro-snackbar button[data-purpose="alert"]',
+      '.kiro-snackbar button.kiro-button',
+      'button.kiro-button[data-variant="primary"]',
     ],
-    
+
     // Kiro Snackbar容器選擇器
     kiroSnackbarContainer: [
       '.kiro-snackbar',
       '.kiro-snackbar-container',
       '.kiro-snackbar-container.needs-attention',
       'div[class*="kiro-snackbar"]',
+    ],
+
+    // 點擊驗證選擇器
+    waitingText: [
+      '.thinking-text[data-is-thinking="true"]',
+      '.thinking-text',
+      '.kiro-snackbar-title',
+      '[data-is-thinking="true"]',
     ]
   };
+
+  /**
+   * 🎯 按鈕模式配置 - 支援語義化識別
+   */
+  const BUTTON_PATTERNS = {
+    retry: {
+      keywords: ['retry', 'retry button', '重試', '重新嘗試', '再試一次'],
+      priority: 1,
+      extraTime: 2000,
+    },
+    kiroSnackbarRun: {
+      keywords: ['run', 'run button', '執行', '運行'],
+      priority: 2,
+      extraTime: 1000,
+    },
+    trust: {
+      keywords: ['trust', 'trust button', '信任'],
+      priority: 3,
+      extraTime: 500,
+    },
+    reject: {
+      keywords: ['reject', 'reject button', '拒絕'],
+      priority: 4,
+      extraTime: 500,
+    },
+  };
+
+  /**
+   * 🔍 彈性元素查找器 - 解決頁面結構耦合問題
+   */
+  class ElementFinder {
+    constructor() {
+      this.cache = new Map();
+      this.cacheTimeout = 5000; // 5秒快取
+    }
+
+    /**
+     * 使用多重選擇器策略查找元素
+     */
+    findElement(selectors, context = document) {
+      const cacheKey = selectors.join('|') + (context !== document ? context.className : '');
+      const cached = this.cache.get(cacheKey);
+
+      if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+        // 檢查快取元素是否仍然有效
+        if (this.isElementValid(cached.element)) {
+          return cached.element;
+        } else {
+          // 移除無效快取
+          this.cache.delete(cacheKey);
+        }
+      }
+
+      for (const selector of selectors) {
+        try {
+          const element = context.querySelector(selector);
+          if (element && this.isElementVisible(element)) {
+            this.cache.set(cacheKey, { element, timestamp: Date.now() });
+            return element;
+          }
+        } catch (error) {
+          console.warn(`[ElementFinder] 選擇器失效: ${selector}`, error);
+        }
+      }
+
+      return null;
+    }
+
+    /**
+     * 查找所有匹配元素
+     */
+    findElements(selectors, context = document) {
+      const elements = [];
+
+      for (const selector of selectors) {
+        try {
+          const found = context.querySelectorAll(selector);
+          elements.push(...Array.from(found).filter(el => this.isElementVisible(el)));
+        } catch (error) {
+          console.warn(`[ElementFinder] 選擇器失效: ${selector}`, error);
+        }
+      }
+
+      return elements;
+    }
+
+    /**
+     * 語義化按鈕識別
+     */
+    findButtonsBySemantics(context = document) {
+      const buttons = [];
+
+      // 使用多種策略查找可點擊元素
+      const clickableSelectors = [
+        'button',
+        'div[role="button"]',
+        'span[role="button"]',
+        'div[onclick]',
+        'div[style*="cursor: pointer"]',
+        'div[style*="cursor:pointer"]',
+        '[class*="button"]',
+        '[class*="btn"]',
+        '[class*="kiro-button"]',
+        '[data-variant]',
+        '[data-purpose]',
+      ];
+
+      const clickableElements = this.findElements(clickableSelectors, context);
+
+      for (const element of clickableElements) {
+        const buttonType = this.identifyButtonType(element);
+        if (buttonType) {
+          buttons.push({ element, type: buttonType });
+        }
+      }
+
+      return buttons;
+    }
+
+    /**
+     * 識別按鈕類型
+     */
+    identifyButtonType(element) {
+      const text = element.textContent?.toLowerCase().trim() || '';
+      const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
+      const title = element.getAttribute('title')?.toLowerCase() || '';
+      const className = element.className?.toLowerCase() || '';
+      const dataVariant = element.getAttribute('data-variant')?.toLowerCase() || '';
+      const dataPurpose = element.getAttribute('data-purpose')?.toLowerCase() || '';
+      const searchText = `${text} ${ariaLabel} ${title} ${className} ${dataVariant} ${dataPurpose}`;
+
+      for (const [type, config] of Object.entries(BUTTON_PATTERNS)) {
+        for (const keyword of config.keywords) {
+          if (searchText.includes(keyword.toLowerCase())) {
+            return type;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    /**
+     * 檢查元素可見性
+     */
+    isElementVisible(element) {
+      if (!element) return false;
+
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        parseFloat(style.opacity) > 0.1 &&
+        rect.width > 0 &&
+        rect.height > 0
+      );
+    }
+
+    /**
+     * 檢查元素可點擊性
+     */
+    isElementClickable(element) {
+      if (!element) return false;
+
+      const style = window.getComputedStyle(element);
+      return (
+        style.pointerEvents !== 'none' &&
+        !element.disabled &&
+        !element.hasAttribute('disabled') &&
+        element.getAttribute('aria-disabled') !== 'true'
+      );
+    }
+
+    /**
+     * 檢查元素是否仍然有效
+     */
+    isElementValid(element) {
+      return (
+        element &&
+        element.isConnected &&
+        document.contains(element) &&
+        this.isElementVisible(element)
+      );
+    }
+
+    /**
+     * 清除快取
+     */
+    clearCache() {
+      this.cache.clear();
+    }
+  }
 
   /**
    * 🔬 DOM 監視器
@@ -431,6 +639,7 @@
       };
 
       // 初始化模組
+      this.elementFinder = new ElementFinder();
       this.domWatcher = new DOMWatcher(() => this.checkAndClickButtons());
       this.controlPanel = null;
 
@@ -445,19 +654,28 @@
       if (!this.isRunning) return;
 
       try {
+        // 清理過期的點擊記錄
+        this.cleanupExpiredClicks();
+
         // 檢查Retry按鈕
         if (this.moduleConfig.retryButton.enabled) {
-          const retryButton = this.findRetryButton();
-          if (retryButton && this.canClickButton(retryButton)) {
-            this.clickButton(retryButton, "retryButton", "Retry");
+          const retryButtons = this.findRetryButtons();
+          for (const button of retryButtons) {
+            if (this.canClickElement(button, "retry")) {
+              this.clickElement(button, "retry");
+              break; // 只點擊一個按鈕
+            }
           }
         }
 
         // 檢查Kiro Snackbar Run按鈕
         if (this.moduleConfig.kiroSnackbar.enabled) {
-          const kiroRunButton = this.findKiroSnackbarRunButton();
-          if (kiroRunButton && this.canClickButton(kiroRunButton)) {
-            this.clickButton(kiroRunButton, "kiroSnackbar", "Kiro Snackbar Run");
+          const kiroRunButtons = this.findKiroSnackbarRunButtons();
+          for (const button of kiroRunButtons) {
+            if (this.canClickElement(button, "kiroSnackbarRun")) {
+              this.clickElement(button, "kiroSnackbarRun");
+              break; // 只點擊一個按鈕
+            }
           }
         }
       } catch (error) {

@@ -1,13 +1,13 @@
-# 🚀 KiroAssist - Auto Retry Button Clicker
+# 🚀 KiroAssist - 智能助手專業版
 
 <div align="center">
 
-![KiroAssist Logo](https://img.shields.io/badge/KiroAssist-v3.0.1-blueviolet?style=for-the-badge&logo=javascript)
+![KiroAssist Logo](https://img.shields.io/badge/KiroAssist-v4.0.0-blueviolet?style=for-the-badge&logo=javascript)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Kiro Compatible](https://img.shields.io/badge/Kiro-Compatible-9945FF?style=for-the-badge)](https://kiro.dev/)
 
-**專業級自動重試按鈕點擊器 - 為 Kiro AI IDE 量身打造**
+**專業級智能助手 - 為 Kiro AI IDE 量身打造的多功能自動化工具**
 
 [🎯 快速開始](#-快速開始) • [📖 使用教學](#-使用教學) • [⚡ 功能特色](#-功能特色) • [🛠️ 安裝方式](#️-安裝方式) • [📚 API 文檔](#-api-文檔)
 
