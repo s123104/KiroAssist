@@ -104,3 +104,7 @@ Thumbs.db
 build/
 dist/
 out/
+
+# Analysis and comparison files
+cursor.js
+ClickPilot_vs_Cursor_Analysis_Report.md

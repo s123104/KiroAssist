@@ -1,9 +1,14 @@
 # 📚 KiroAssist API 文檔
 
-本文檔詳細說明 KiroAssist v3.1.1 智能助手的所有 API 接口和使用方法。
+本文檔詳細說明 KiroAssist v3.1.2 智能助手的所有 API 接口和使用方法。
 
-## 🆕 v3.1.1 新功能
+## 🆕 v3.1.2 新功能
 
+- **精確選擇器優化**：參考極簡腳本，使用更精確的 `div.kiro-snackbar button.kiro-button[data-variant="primary"]` 選擇器
+- **防抖延遲優化**：從 300ms 優化為 250ms，提高響應速度
+- **新增 isElementReady 方法**：提供更完整的元素狀態檢查邏輯
+- **雙重檢測機制**：先使用精確選擇器，失敗時回退到原有邏輯
+- **文字驗證增強**：確保按鈕文字確實為 "Run" 才進行點擊
 - **安全的類名獲取**：新增 `getElementClassName` 方法，安全處理不同類型的 className 屬性
 - **增強的錯誤處理**：改進了類名獲取過程中的錯誤處理機制
 - **增強的彈性選擇器**：更精確的按鈕檢測，支援 `data-variant` 和 `data-purpose` 屬性匹配

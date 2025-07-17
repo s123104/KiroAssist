@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![KiroAssist Logo](https://img.shields.io/badge/KiroAssist-v3.1.1-blueviolet?style=for-the-badge&logo=javascript)
+![KiroAssist Logo](https://img.shields.io/badge/KiroAssist-v3.1.2-blueviolet?style=for-the-badge&logo=javascript)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Kiro Compatible](https://img.shields.io/badge/Kiro-Compatible-9945FF?style=for-the-badge)](https://kiro.dev/)

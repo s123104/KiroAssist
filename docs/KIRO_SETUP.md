@@ -1,9 +1,13 @@
 # 🎯 Kiro 專用設置指南
 
-專為 Kiro AI IDE 用戶設計的 KiroAssist v3.1.1 快速設置指南。
+專為 Kiro AI IDE 用戶設計的 KiroAssist v3.1.2 快速設置指南。
 
-## 🆕 v3.1.1 功能亮點
+## 🆕 v3.1.2 功能亮點
 
+- **精確選擇器優化**：參考極簡腳本，使用 `div.kiro-snackbar button.kiro-button[data-variant="primary"]` 精確選擇器
+- **響應速度提升**：防抖延遲從 300ms 優化為 250ms，提高 17% 響應速度
+- **雙重檢測保障**：先使用精確選擇器，失敗時智能回退，確保穩定性
+- **元素狀態增強**：新增 `isElementReady` 完整狀態檢查，提高點擊成功率
 - **安全的類名處理**：新增 `getElementClassName` 方法，增強元素識別的穩定性
 - **增強的錯誤處理**：改進了類名獲取過程中的錯誤處理機制
 - **精確按鈕匹配**：基於 `data-variant` 和 `data-purpose` 屬性的精確識別

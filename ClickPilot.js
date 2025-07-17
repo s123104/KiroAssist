@@ -1,24 +1,27 @@
-/**
- * 📦 模組：KiroAssist v3.1.2 - 智能助手專業版
- * 🕒 最後更新：2025-07-17T17:00:00+08:00
- * 🧑‍💻 作者：threads:azlife_1224
- * 🔢 版本：v3.1.2
- * 📝 摘要：智能檢測並自動點擊各種按鈕，提供完整的模組化功能
- *
- * 🎯 功能特色：
- * ✅ 自動檢測Retry按鈕
- * ✅ 自動檢測Kiro Snackbar並點擊Run
- * ✅ MutationObserver監控DOM變化
- * ✅ 防重複點擊機制
- * ✅ 模組化功能設定
- * ✅ 專業App風格控制面板
- * ✅ SVG圖標系統 (純DOM API)
- * ✅ 點擊統計記錄
- * ✅ 可拖拽面板
- * ✅ 流暢動畫效果
- * ✅ 現代化設計語言
- * ✅ TrustedHTML相容性
- */
+/*** 
+* 📦 模組：KiroAssist v3.2.0 - 智能助手專業版 (極簡腳本整合版)
+* 🕒 最後更新：2025-07-17T17:30:00+08:00
+* 🧑‍💻 作者：threads:azlife_1224
+* 🔢 版本：v3.2.0
+* 📝 摘要：整合極簡腳本邏輯，提供高效能的按鈕檢測與點擊功能
+*
+* 🎯 功能特色：
+* ✅ 自動檢測Retry按鈕 (精確選擇器匹配)
+* ✅ 自動檢測Kiro Snackbar並點擊Run (統一檢測邏輯)
+* ✅ MutationObserver監控DOM變化 (250ms防抖優化)
+* ✅ 防重複點擊機制 (參考極簡腳本)
+* ✅ 模組化功能設定
+* ✅ 專業App風格控制面板
+* ✅ SVG圖標系統 (純DOM API)
+* ✅ 點擊統計記錄
+* ✅ 可拖拽面板
+* ✅ 流暢動畫效果
+* ✅ 現代化設計語言
+* ✅ TrustedHTML相容性
+* 🆕 極簡腳本整合 (統一檢測邏輯)
+* 🆕 精確元素準備檢查 (isElementReady)
+* 🆕 簡化點擊執行流程
+*/
 
 (function () {
   "use strict";
@@ -926,7 +929,7 @@
    */
   class KiroAssist {
     constructor() {
-      this.version = "3.1.2";
+      this.version = "3.2.0";
       this.isRunning = false;
       this.totalClicks = 0;
       this.lastClickTime = 0;
@@ -965,39 +968,114 @@
       this.controlPanel = null;
 
       this.createControlPanel();
-      this.log("🚀 KiroAssist v3.1.2 已初始化 (參考極簡腳本優化)", "success");
+      this.log("🚀 KiroAssist v3.2.0 已初始化 (參考極簡腳本優化)", "success");
     }
 
     /**
-     * 檢查並點擊各種按鈕 (Enhanced with CursorAutoAccept patterns)
+     * 檢查並點擊各種按鈕 (參考極簡腳本的統一檢測邏輯)
      */
     checkAndClickButtons() {
       if (!this.isRunning) return;
 
       try {
-        // 清理過期的點擊記錄和元素狀態
-        this.cleanupExpiredClicks();
-        this.cleanupExpiredElementStates();
-
-        // 獲取所有可點擊按鈕並按優先級排序
-        const allButtons = this.findAllClickableButtons();
-        const sortedButtons = this.sortButtonsByPriority(allButtons);
-
-        // 處理按鈕點擊 - 每次檢查只點擊一個最高優先級的按鈕
-        for (const buttonInfo of sortedButtons) {
-          const { button, type, priority } = buttonInfo;
-          
-          if (this.canClickElement(button, type)) {
-            const success = this.clickElement(button, type);
-            if (success) {
-              console.log(`[KiroAssist] 成功點擊 ${type} 按鈕 (優先級: ${priority})`);
-              break; // 成功點擊後停止，避免連續點擊
-            }
-          }
-        }
+        // 參考極簡腳本的統一檢測邏輯
+        this.detectAndClickTargets();
       } catch (error) {
         this.log(`執行時出錯：${error.message}`, "error");
         console.error("[KiroAssist] 詳細錯誤:", error);
+      }
+    }
+
+    /**
+     * 統一檢測並點擊目標按鈕 (參考極簡腳本邏輯)
+     */
+    detectAndClickTargets() {
+      // --- 目標 1: 點擊 "Run" 按鈕 ---
+      const runButton = document.querySelector('div.kiro-snackbar button.kiro-button[data-variant="primary"]');
+      if (runButton && runButton.textContent.trim() === 'Run' && this.isElementReady(runButton)) {
+        console.log('[KiroAssist] 偵測到 "Run" 按鈕，執行點擊！');
+        this.performSimpleClick(runButton, 'kiroSnackbarRun');
+        return; // 執行一次點擊後就返回，避免在同一次檢查中誤觸其他按鈕
+      }
+
+      // --- 目標 2: 點擊 "Retry" 按鈕 ---
+      // 為了更精準地定位，我們可以在可能的父容器中尋找
+      // 但如果父容器不固定，直接尋找特定按鈕也是可靠的方法
+      const retryButton = document.querySelector('button.kiro-button[data-variant="secondary"][data-purpose="default"]');
+      // 再次驗證文字內容為 "Retry"，並且按鈕可用
+      if (retryButton && retryButton.textContent.trim() === 'Retry' && this.isElementReady(retryButton)) {
+        // 檢查父容器是否為 chat-message-body 來增加準確性
+        if (retryButton.closest('div.kiro-chat-message-body')) {
+          console.log('[KiroAssist] 偵測到 "Retry" 按鈕，執行點擊！');
+          this.performSimpleClick(retryButton, 'retry');
+          return; // 執行後返回
+        }
+      }
+    }
+
+    /**
+     * 檢查一個元素是否在畫面上可見且可點擊。(參考極簡腳本的 isElementReady 邏輯)
+     * @param {HTMLElement} element - 要檢查的DOM元素。
+     * @returns {boolean} 如果元素可見且可用，返回 true。
+     */
+    isElementReady(element) {
+      if (!element) {
+        return false;
+      }
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity > 0 &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        !element.disabled &&
+        !element.hasAttribute('disabled')
+      );
+    }
+
+    /**
+     * 執行簡單點擊 (參考極簡腳本的直接點擊方式)
+     */
+    performSimpleClick(element, buttonType) {
+      const now = Date.now();
+      const elementKey = this.getElementKey(element);
+
+      // 基本的防重複點擊檢查
+      if (elementKey && this.recentClicks.has(elementKey)) {
+        const lastClickTime = this.recentClicks.get(elementKey);
+        if (now - lastClickTime < this.clickCooldownPeriod) {
+          return false;
+        }
+      }
+
+      try {
+        // 記錄點擊
+        if (elementKey) {
+          this.recentClicks.set(elementKey, now);
+        }
+        this.lastClickTime = now;
+
+        // 直接點擊元素
+        element.click();
+
+        // 更新統計
+        this.totalClicks++;
+        const moduleKey = buttonType === 'retry' ? 'retryButton' : 'kiroSnackbar';
+        if (this.moduleStats[moduleKey] !== undefined) {
+          this.moduleStats[moduleKey]++;
+        }
+
+        // 記錄日誌
+        this.log(`成功點擊 ${buttonType} 按鈕`, "success");
+        this.updateControlPanel();
+
+        return true;
+      } catch (error) {
+        console.error(`[KiroAssist] 點擊失敗:`, error);
+        this.log(`點擊 ${buttonType} 按鈕失敗: ${error.message}`, "error");
+        return false;
       }
     }
 
@@ -2889,7 +2967,7 @@
   window.stopRetryClicker = () => kiroAssist.stop();
   window.retryClickerStatus = () => kiroAssist.getStatus();
 
-  console.log("✨ KiroAssist v3.1.2 (智能助手專業版) 已載入！");
+  console.log("✨ KiroAssist v3.2.0 (智能助手專業版) 已載入！");
   console.log("🎛️ 新API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
   console.log("🔄 舊API: startRetryClicker(), stopRetryClicker(), retryClickerStatus() (向後相容)");
   console.log("👨‍💻 作者: threads:azlife_1224");
