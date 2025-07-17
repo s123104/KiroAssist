@@ -1,8 +1,8 @@
 /**
- * 📦 模組：KiroAssist v3.1.0 - 智能助手專業版
+ * 📦 模組：KiroAssist v3.1.1 - 智能助手專業版
  * 🕒 最後更新：2025-07-17T17:00:00+08:00
  * 🧑‍💻 作者：threads:azlife_1224
- * 🔢 版本：v3.1.0
+ * 🔢 版本：v3.1.1
  * 📝 摘要：智能檢測並自動點擊各種按鈕，提供完整的模組化功能
  *
  * 🎯 功能特色：
@@ -479,7 +479,7 @@
       if (!element) return null;
       
       const text = element.textContent?.trim() || '';
-      const className = element.className || '';
+      const className = this.getElementClassName(element);
       const tagName = element.tagName || '';
       const dataVariant = element.getAttribute('data-variant') || '';
       const dataPurpose = element.getAttribute('data-purpose') || '';
@@ -500,7 +500,7 @@
       const text = element.textContent?.toLowerCase().trim() || '';
       const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
       const title = element.getAttribute('title')?.toLowerCase() || '';
-      const className = element.className?.toLowerCase() || '';
+      const className = this.getElementClassName(element).toLowerCase();
       const dataVariant = element.getAttribute('data-variant')?.toLowerCase() || '';
       const dataPurpose = element.getAttribute('data-purpose')?.toLowerCase() || '';
       const dataActive = element.getAttribute('data-active')?.toLowerCase() || '';
@@ -597,6 +597,32 @@
      */
     clearCache() {
       this.cache.clear();
+    }
+
+    /**
+     * 安全地獲取元素的類名字符串
+     */
+    getElementClassName(element) {
+      if (!element) return "";
+      
+      try {
+        // 處理不同類型的 className 屬性
+        if (typeof element.className === 'string') {
+          return element.className;
+        } else if (element.className && element.className.toString) {
+          // 處理 DOMTokenList 或其他對象
+          return element.className.toString();
+        } else if (element.classList) {
+          // 使用 classList 作為備選方案
+          return Array.from(element.classList).join(' ');
+        } else {
+          // 最後的備選方案
+          return element.getAttribute('class') || "";
+        }
+      } catch (error) {
+        console.warn('[ElementFinder] Error getting className:', error);
+        return "";
+      }
     }
   }
 
@@ -763,7 +789,7 @@
       if (!element) return result;
       
       const text = element.textContent?.toLowerCase() || "";
-      const className = element.className || "";
+      const className = this.getElementClassName(element);
       
       // 檢查是否為 Retry 按鈕 - 更精確的檢測
       const isRetryButton = (
@@ -847,6 +873,32 @@
       
       return result;
     }
+
+    /**
+     * 安全地獲取元素的類名字符串
+     */
+    getElementClassName(element) {
+      if (!element) return "";
+      
+      try {
+        // 處理不同類型的 className 屬性
+        if (typeof element.className === 'string') {
+          return element.className;
+        } else if (element.className && element.className.toString) {
+          // 處理 DOMTokenList 或其他對象
+          return element.className.toString();
+        } else if (element.classList) {
+          // 使用 classList 作為備選方案
+          return Array.from(element.classList).join(' ');
+        } else {
+          // 最後的備選方案
+          return element.getAttribute('class') || "";
+        }
+      } catch (error) {
+        console.warn('[DOMWatcher] Error getting className:', error);
+        return "";
+      }
+    }
   }
 
   /**
@@ -854,7 +906,7 @@
    */
   class KiroAssist {
     constructor() {
-      this.version = "3.1.0";
+      this.version = "3.1.1";
       this.isRunning = false;
       this.totalClicks = 0;
       this.lastClickTime = 0;
@@ -893,7 +945,7 @@
       this.controlPanel = null;
 
       this.createControlPanel();
-      this.log("🚀 KiroAssist v3.1.0 已初始化", "success");
+      this.log("🚀 KiroAssist v3.1.1 已初始化", "success");
     }
 
     /**
@@ -2805,7 +2857,7 @@
   window.stopRetryClicker = () => kiroAssist.stop();
   window.retryClickerStatus = () => kiroAssist.getStatus();
 
-  console.log("✨ KiroAssist v3.1.0 (智能助手專業版) 已載入！");
+  console.log("✨ KiroAssist v3.1.1 (智能助手專業版) 已載入！");
   console.log("🎛️ 新API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
   console.log("🔄 舊API: startRetryClicker(), stopRetryClicker(), retryClickerStatus() (向後相容)");
   console.log("👨‍💻 作者: threads:azlife_1224");
