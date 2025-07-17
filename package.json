@@ -1,0 +1,51 @@
+{
+  "name": "clickpilot",
+  "version": "3.0.1",
+  "description": "專業級自動重試按鈕點擊器 - 為 Kiro AI IDE 量身打造",
+  "main": "ClickPilot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ClickPilot.js",
+    "format": "prettier --write ClickPilot.js",
+    "build": "echo \"No build process required for browser script\"",
+    "dev": "echo \"Load ClickPilot.js in browser console for development\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/s123104/ClickPilot.git"
+  },
+  "keywords": [
+    "kiro",
+    "ai-ide",
+    "automation",
+    "retry",
+    "button-clicker",
+    "javascript",
+    "browser-script",
+    "userscript",
+    "dom-automation",
+    "ui-automation"
+  ],
+  "author": {
+    "name": "azlife_1224",
+    "url": "https://www.threads.net/@azlife_1224"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/s123104/ClickPilot/issues"
+  },
+  "homepage": "https://github.com/s123104/ClickPilot#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "Chrome >= 80",
+    "Firefox >= 75",
+    "Safari >= 13",
+    "Edge >= 80"
+  ],
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0"
+  }
+}
