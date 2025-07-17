@@ -1,9 +1,9 @@
 /*** 
-* 📦 模組：KiroAssist v3.2.1 - 智能助手專業版 (極簡腳本整合版)
-* 🕒 最後更新：2025-07-17T17:30:00+08:00
+* 📦 模組：KiroAssist v3.2.4 - 智能助手專業版 (極簡腳本整合版)
+* 🕒 最後更新：2025-07-17T17:45:00+08:00
 * 🧑‍💻 作者：threads:azlife_1224
-* 🔢 版本：v3.2.1
-* 📝 摘要：整合極簡腳本邏輯，提供高效能的按鈕檢測與點擊功能
+* 🔢 版本：v3.2.4
+* 📝 摘要：完全採用用戶測試腳本 v2.1.1 邏輯，移除衝突的檢測邏輯
 *
 * 🎯 功能特色：
 * ✅ 自動檢測Retry按鈕 (精確選擇器匹配)
@@ -18,9 +18,9 @@
 * ✅ 流暢動畫效果
 * ✅ 現代化設計語言
 * ✅ TrustedHTML相容性
-* 🆕 極簡腳本整合 (統一檢測邏輯)
-* 🆕 精確元素準備檢查 (isElementReady)
-* 🆕 簡化點擊執行流程
+* 🆕 完全採用用戶測試腳本 v2.1.1 邏輯
+* 🆕 使用 querySelectorAll 搜索避免遺漏目標
+* 🆕 移除衝突的複雜檢測邏輯，確保功能正常運作
 */
 
 (function () {
@@ -360,6 +360,66 @@
         }
       },
     };
+
+
+
+    /**
+     * 🎯 目標定義與選擇器備案 - 完全採用用戶測試腳本 v2.1.1 的邏輯
+     * 使用 querySelectorAll 搜索邏輯，避免遺漏目標
+     */
+    const TARGET_DEFINITIONS = [
+      {
+        name: 'Run Button',
+        selectors: [
+          'div.kiro-snackbar button.kiro-button[data-variant="primary"][data-purpose="alert"]',
+          'div.kiro-snackbar-actions button[data-variant="primary"]'
+        ],
+        validate: (element) => element.textContent.trim() === 'Run'
+      },
+      {
+        name: 'Retry Button',
+        selectors: [
+          'div.kiro-chat-message-body button.kiro-button[data-variant="secondary"][data-purpose="default"]',
+          'button.kiro-button[data-variant="secondary"]'
+        ],
+        validate: (element) => element.textContent.trim() === 'Retry'
+      }
+    ];
+
+    /**
+     * 檢查一個元素是否在畫面上可見且可點擊 - 完全採用用戶測試腳本邏輯
+     */
+    function isElementReady(element) {
+      if (!element) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity > 0 &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        !element.disabled &&
+        !element.hasAttribute('disabled')
+      );
+    }
+
+    /**
+     * 主函式：遍歷所有目標定義，使用 querySelectorAll 尋找並點擊 - 完全採用用戶測試腳本邏輯
+     */
+    function findTargetByDefinitions() {
+      for (const target of TARGET_DEFINITIONS) {
+        for (const selector of target.selectors) {
+          const foundElements = document.querySelectorAll(selector);
+          for (const element of foundElements) {
+            if (isElementReady(element) && (!target.validate || target.validate(element))) {
+              return { element: element, type: target.name };
+            }
+          }
+        }
+      }
+      return null;
+    }
   
     /**
      * 🔍 彈性元素查找器 - 解決頁面結構耦合問題
@@ -929,7 +989,7 @@
      */
     class KiroAssist {
       constructor() {
-        this.version = "3.2.1";
+        this.version = "3.2.4";
         this.isRunning = false;
         this.totalClicks = 0;
         this.lastClickTime = 0;
@@ -968,7 +1028,7 @@
         this.controlPanel = null;
   
         this.createControlPanel();
-        this.log("🚀 KiroAssist v3.2.1 已初始化 (參考極簡腳本優化)", "success");      }
+        this.log("🚀 KiroAssist v3.2.4 已初始化 (完全採用用戶測試腳本邏輯)", "success");      }
   
       /**
        * 檢查並點擊各種按鈕 (參考極簡腳本的統一檢測邏輯)
@@ -985,66 +1045,29 @@
         }
       }
   
-      /**
-       * 統一檢測並點擊目標按鈕 (參考極簡腳本邏輯)
+            /**
+       * 統一檢測並點擊目標按鈕 - 完全採用用戶測試腳本 v2.1.1 邏輯
        */
       detectAndClickTargets() {
-        // --- [增強] 彈性多目標策略優先 ---
-        const target = this.findTargetByDefinitions();
-        if (target && this.isElementReady(target.element)) {
+        // 使用用戶測試腳本的邏輯：遍歷所有目標定義，使用 querySelectorAll 尋找並點擊
+        const target = findTargetByDefinitions();
+        if (target && isElementReady(target.element)) {
+          console.log(`[自動點擊器] 發現目標: "${target.type}"，執行點擊！`);
           this.performSimpleClick(target.element, target.type);
-          this.log(`[增強策略] 自動點擊: ${target.type}`, "success");
+          this.log(`自動點擊: ${target.type}`, "success");
           return;
         }
-  
-        // --- 目標 1: 點擊 "Run" 按鈕 ---
-        const runButton = document.querySelector('div.kiro-snackbar button.kiro-button[data-variant="primary"]');
-        if (runButton && runButton.textContent.trim() === 'Run' && this.isElementReady(runButton)) {
-          console.log('[KiroAssist] 偵測到 "Run" 按鈕，執行點擊！');
-          this.performSimpleClick(runButton, 'kiroSnackbarRun');
-          return; // 執行一次點擊後就返回，避免在同一次檢查中誤觸其他按鈕
-        }
-  
-        // --- 目標 2: 點擊 "Retry" 按鈕 ---
-        const retryButton = document.querySelector('button.kiro-button[data-variant="secondary"][data-purpose="default"]');
-        if (retryButton && retryButton.textContent.trim() === 'Retry' && this.isElementReady(retryButton)) {
-          if (retryButton.closest('div.kiro-chat-message-body')) {
-            console.log('[KiroAssist] 偵測到 "Retry" 按鈕，執行點擊！');
-            this.performSimpleClick(retryButton, 'retry');
-            return; // 執行後返回
-          }
-        }
       }
   
-      /**
-       * 檢查一個元素是否在畫面上可見且可點擊。(參考極簡腳本的 isElementReady 邏輯)
-       * @param {HTMLElement} element - 要檢查的DOM元素。
-       * @returns {boolean} 如果元素可見且可用，返回 true。
-       */
-      isElementReady(element) {
-        if (!element) {
-          return false;
-        }
-        const style = window.getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        return (
-          style.display !== 'none' &&
-          style.visibility !== 'hidden' &&
-          style.opacity > 0 &&
-          rect.width > 0 &&
-          rect.height > 0 &&
-          !element.disabled &&
-          !element.hasAttribute('disabled')
-        );
-      }
+
   
-      /**
-       * 執行簡單點擊 (參考極簡腳本的直接點擊方式)
+            /**
+       * 執行簡單點擊 - 完全採用用戶測試腳本的簡潔邏輯
        */
       performSimpleClick(element, buttonType) {
         const now = Date.now();
         const elementKey = this.getElementKey(element);
-  
+
         // 基本的防重複點擊檢查
         if (elementKey && this.recentClicks.has(elementKey)) {
           const lastClickTime = this.recentClicks.get(elementKey);
@@ -1052,70 +1075,39 @@
             return false;
           }
         }
-  
+
         try {
           // 記錄點擊
           if (elementKey) {
             this.recentClicks.set(elementKey, now);
           }
           this.lastClickTime = now;
-  
-          // 直接點擊元素
+
+          // 直接點擊元素 - 採用用戶測試腳本的簡潔方式
           element.click();
-  
+
           // 更新統計
           this.totalClicks++;
-          const moduleKey = buttonType === 'retry' ? 'retryButton' : 'kiroSnackbar';
+          const moduleKey = buttonType.includes('Run') ? 'kiroSnackbar' : 'retryButton';
           if (this.moduleStats[moduleKey] !== undefined) {
             this.moduleStats[moduleKey]++;
           }
-  
+
           // 記錄日誌
-          this.log(`成功點擊 ${buttonType} 按鈕`, "success");
-          this.updateControlPanel();
-  
+          this.log(`成功點擊 ${buttonType}`, "success");
+          this.updatePanelStatus();
+
           return true;
         } catch (error) {
           console.error(`[KiroAssist] 點擊失敗:`, error);
-          this.log(`點擊 ${buttonType} 按鈕失敗: ${error.message}`, "error");
+          this.log(`點擊 ${buttonType} 失敗: ${error.message}`, "error");
           return false;
         }
       }
   
-      /**
-       * 尋找所有可點擊按鈕並整合到統一列表
+            /**
+       * 已移除：使用統一的 findTargetByDefinitions 入口，不再需要多重檢測邏輯
        */
-      findAllClickableButtons() {
-        const allButtons = [];
-  
-        // 檢查Retry按鈕
-        if (this.moduleConfig.retryButton.enabled) {
-          const retryButtons = this.findRetryButtons();
-          retryButtons.forEach(button => {
-            allButtons.push({
-              button,
-              type: 'retry',
-              priority: BUTTON_PATTERNS.retry.priority,
-              moduleConfig: this.moduleConfig.retryButton
-            });
-          });
-        }
-  
-        // 檢查Kiro Snackbar Run按鈕
-        if (this.moduleConfig.kiroSnackbar.enabled) {
-          const kiroRunButtons = this.findKiroSnackbarRunButtons();
-          kiroRunButtons.forEach(button => {
-            allButtons.push({
-              button,
-              type: 'kiroSnackbarRun',
-              priority: BUTTON_PATTERNS.kiroSnackbarRun.priority,
-              moduleConfig: this.moduleConfig.kiroSnackbar
-            });
-          });
-        }
-  
-        return allButtons;
-      }
   
       /**
        * 按優先級排序按鈕
@@ -1153,86 +1145,9 @@
         }
       }
   
-      /**
-       * 尋找Retry按鈕
+            /**
+       * 已移除：使用統一的 findTargetByDefinitions 入口，不再需要多重檢測邏輯
        */
-      findRetryButtons() {
-        const buttons = this.elementFinder.findButtonsBySemantics();
-        const retryButtons = buttons.filter(btn => btn.type === 'retry').map(btn => btn.element);
-        
-        // 如果語義化識別沒有找到，使用傳統方法
-        if (retryButtons.length === 0) {
-          const fallbackButtons = this.elementFinder.findElements(SELECTORS.retryButtons);
-          return fallbackButtons.filter(btn => 
-            btn.textContent?.toLowerCase().includes('retry') ||
-            btn.textContent?.toLowerCase().includes('重試')
-          );
-        }
-        
-        return retryButtons;
-      }
-  
-      /**
-       * 尋找Kiro Snackbar Run按鈕 (參考極簡腳本的精確選擇器邏輯)
-       */
-      findKiroSnackbarRunButtons() {
-        // 使用精確的選擇器找到目標按鈕 (參考極簡腳本)
-        // - 在 'div.kiro-snackbar' 容器內
-        // - 尋找 'button.kiro-button'
-        // - 該按鈕的 data-variant 屬性為 'primary'
-        const runButton = document.querySelector('div.kiro-snackbar button.kiro-button[data-variant="primary"]');
-        
-        // 檢查按鈕是否存在，文字是否為 "Run"，且是否準備就緒
-        if (runButton && runButton.textContent.trim() === 'Run' && this.elementFinder.isElementReady(runButton)) {
-          console.log("[KiroAssist] 偵測到精確的 'Run' 按鈕");
-          return [runButton];
-        }
-  
-        // 如果精確選擇器沒找到，回退到原有邏輯
-        const snackbarContainer = this.elementFinder.findElement(SELECTORS.kiroSnackbarContainer);
-        if (!snackbarContainer) {
-          console.log("[KiroAssist] 未找到 Kiro Snackbar 容器");
-          return [];
-        }
-  
-        console.log("[KiroAssist] 找到 Kiro Snackbar 容器:", snackbarContainer);
-  
-        // 檢查容器是否包含"Waiting on your input"文字
-        const waitingText = this.elementFinder.findElement(SELECTORS.waitingText, snackbarContainer);
-        const hasWaitingText = waitingText && waitingText.textContent.includes("Waiting on your input");
-        
-        // 也檢查是否包含"needs-attention"類別
-        const hasNeedsAttention = snackbarContainer.classList.contains('needs-attention') || 
-                                 snackbarContainer.querySelector('.needs-attention');
-        
-        console.log("[KiroAssist] 檢查狀態 - hasWaitingText:", hasWaitingText, "hasNeedsAttention:", hasNeedsAttention);
-        
-        // 如果沒有等待輸入的文字且不是需要注意的通知，就跳過
-        if (!hasWaitingText && !hasNeedsAttention) {
-          console.log("[KiroAssist] 條件不滿足，跳過處理");
-          return [];
-        }
-  
-        // 在容器內尋找Run按鈕
-        const buttons = this.elementFinder.findButtonsBySemantics(snackbarContainer);
-        const runButtons = buttons.filter(btn => btn.type === 'kiroSnackbarRun').map(btn => btn.element);
-        
-        console.log("[KiroAssist] 語義化識別找到按鈕:", runButtons.length);
-        
-        // 如果語義化識別沒有找到，使用傳統方法
-        if (runButtons.length === 0) {
-          console.log("[KiroAssist] 使用傳統方法搜尋按鈕");
-          const fallbackButtons = this.elementFinder.findElements(SELECTORS.kiroSnackbarRun, snackbarContainer);
-          const filteredButtons = fallbackButtons.filter(btn => 
-            btn.textContent?.toLowerCase().includes('run') &&
-            btn.getAttribute('data-variant') === 'primary'
-          );
-          console.log("[KiroAssist] 傳統方法找到按鈕:", filteredButtons.length);
-          return filteredButtons;
-        }
-        
-        return runButtons;
-      }
   
       /**
        * 清理過期的點擊記錄
@@ -1273,395 +1188,17 @@
         }
       }
   
-      /**
-       * 檢查元素是否可以點擊 (Enhanced with comprehensive validation)
+            /**
+       * 已移除：複雜的驗證邏輯，採用用戶測試腳本的簡潔 isElementReady 檢查
        */
-      canClickElement(element, buttonType) {
-        if (!element || !buttonType) return false;
   
-        // Phase 1: 基礎驗證
-        if (!this.isBasicValidationPassed(element, buttonType)) {
-          return false;
-        }
-  
-        // Phase 2: 時間間隔驗證
-        if (!this.isTimingValidationPassed(element, buttonType)) {
-          return false;
-        }
-  
-        // Phase 3: 元素狀態驗證
-        if (!this.isElementStateValid(element, buttonType)) {
-          return false;
-        }
-  
-        // Phase 4: 按鈕特定驗證
-        if (!this.isButtonSpecificValidationPassed(element, buttonType)) {
-          return false;
-        }
-  
-        // Phase 5: 環境上下文驗證
-        if (!this.isContextualValidationPassed(element, buttonType)) {
-          return false;
-        }
-  
-        return true;
-      }
-  
-      /**
-       * 基礎驗證檢查
+            /**
+       * 已移除：所有複雜的驗證邏輯，採用用戶測試腳本的簡潔 isElementReady 檢查
        */
-      isBasicValidationPassed(element, buttonType) {
-        // 檢查元素和類型是否有效
-        if (!element || !buttonType) return false;
   
-        // 檢查元素是否仍然連接到DOM
-        if (!element.isConnected || !document.contains(element)) {
-          return false;
-        }
-  
-        // 檢查元素是否已被處理過
-        if (this.processedElements.has(element)) {
-          return false;
-        }
-  
-        return true;
-      }
-  
-      /**
-       * 時間間隔驗證檢查
+            /**
+       * 已移除：所有複雜的點擊邏輯，採用用戶測試腳本的簡潔 element.click() 方式
        */
-      isTimingValidationPassed(element, buttonType) {
-        const now = Date.now();
-        const elementKey = this.getElementKey(element);
-  
-        // 檢查全域點擊間隔
-        if (now - this.lastClickTime < this.minClickInterval) {
-          return false;
-        }
-  
-        // 檢查元素特定冷卻期
-        if (elementKey && this.recentClicks.has(elementKey)) {
-          const lastClickTime = this.recentClicks.get(elementKey);
-          const cooldownTime = this.clickCooldownPeriod;
-          
-          // 根據按鈕類型調整冷卻期
-          const pattern = BUTTON_PATTERNS[buttonType];
-          const adjustedCooldown = pattern?.extraTime ? cooldownTime + pattern.extraTime : cooldownTime;
-          
-          if (now - lastClickTime < adjustedCooldown) {
-            return false;
-          }
-        }
-  
-        return true;
-      }
-  
-      /**
-       * 元素狀態驗證檢查
-       */
-      isElementStateValid(element, buttonType) {
-        // 檢查基礎可見性和可點擊性
-        if (!this.elementFinder.isElementVisible(element) || 
-            !this.elementFinder.isElementClickable(element)) {
-          return false;
-        }
-  
-        // 檢查元素是否被其他元素遮擋
-        if (this.isElementObscured(element)) {
-          return false;
-        }
-  
-        // 檢查元素尺寸是否合理
-        const rect = element.getBoundingClientRect();
-        if (rect.width < 10 || rect.height < 10) {
-          return false; // 元素太小，可能不是真正的按鈕
-        }
-  
-        return true;
-      }
-  
-      /**
-       * 按鈕特定驗證檢查
-       */
-      isButtonSpecificValidationPassed(element, buttonType) {
-        const pattern = BUTTON_PATTERNS[buttonType];
-        if (!pattern) return false;
-  
-        // 檢查按鈕屬性狀態
-        const dataActive = element.getAttribute('data-active');
-        const dataLoading = element.getAttribute('data-loading');
-        const ariaDisabled = element.getAttribute('aria-disabled');
-  
-        // Retry按鈕特定檢查
-        if (buttonType === 'retry') {
-          // 如果明確標記為非活動狀態，跳過
-          if (dataActive === 'false') return false;
-          
-          // 如果正在載入中，跳過
-          if (dataLoading === 'true') return false;
-        }
-  
-        // Kiro Snackbar Run按鈕特定檢查
-        if (buttonType === 'kiroSnackbarRun') {
-          // 檢查是否在正確的容器中
-          const snackbarContainer = element.closest('.kiro-snackbar, .kiro-snackbar-container');
-          if (!snackbarContainer) return false;
-  
-          // 檢查容器是否有需要注意的狀態
-          const hasNeedsAttention = snackbarContainer.classList.contains('needs-attention') ||
-                                    snackbarContainer.querySelector('.needs-attention');
-          
-          // 檢查是否有等待文字
-          const hasWaitingText = snackbarContainer.textContent.includes('Waiting on your input');
-          
-          if (!hasNeedsAttention && !hasWaitingText) return false;
-        }
-  
-        // 通用disabled檢查
-        if (element.disabled || ariaDisabled === 'true') {
-          return false;
-        }
-  
-        return true;
-      }
-  
-      /**
-       * 環境上下文驗證檢查
-       */
-      isContextualValidationPassed(element, buttonType) {
-        // 檢查頁面是否處於活動狀態
-        if (document.hidden || !document.hasFocus()) {
-          return false; // 頁面不在前台時不點擊
-        }
-  
-        // 檢查是否有模態框或覆蓋層阻擋
-        const modals = document.querySelectorAll('[role="dialog"], .modal, .overlay');
-        for (const modal of modals) {
-          if (this.elementFinder.isElementVisible(modal) && !modal.contains(element)) {
-            return false; // 有模態框且按鈕不在其中
-          }
-        }
-  
-        return true;
-      }
-  
-      /**
-       * 檢查元素是否被遮擋
-       */
-      isElementObscured(element) {
-        try {
-          const rect = element.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          
-          const elementAtPoint = document.elementFromPoint(centerX, centerY);
-          
-          // 如果點擊位置的元素是自己或其子元素，則沒有被遮擋
-          return elementAtPoint !== element && !element.contains(elementAtPoint);
-        } catch {
-          return false; // 發生錯誤時假設沒有被遮擋
-        }
-      }
-  
-      /**
-       * 點擊元素 (Enhanced with improved safety and tracking)
-       */
-      clickElement(element, buttonType) {
-        const startTime = Date.now();
-        let clickSuccess = false;
-        
-        try {
-          // Pre-click validation
-          if (!this.preClickValidation(element, buttonType)) {
-            return false;
-          }
-  
-          const elementKey = this.getElementKey(element);
-          const now = Date.now();
-  
-          // 記錄點擊前狀態
-          this.recordPreClickState(element, buttonType, elementKey, now);
-  
-          // 執行點擊操作
-          clickSuccess = this.performClick(element, buttonType);
-  
-          if (clickSuccess) {
-            // 點擊成功後的處理
-            this.handleClickSuccess(element, buttonType, elementKey, now);
-            
-            // 延遲清理處理過的元素
-            this.scheduleElementCleanup(element, buttonType);
-          } else {
-            // 點擊失敗的處理
-            this.handleClickFailure(element, buttonType, elementKey);
-          }
-  
-          return clickSuccess;
-        } catch (error) {
-          this.handleClickError(element, buttonType, error, startTime);
-          return false;
-        }
-      }
-  
-      /**
-       * 點擊前最終驗證
-       */
-      preClickValidation(element, buttonType) {
-        // 最後一次確認元素仍然可點擊
-        if (!element.isConnected || !this.elementFinder.isElementVisible(element)) {
-          console.log(`[KiroAssist] Pre-click validation failed: element not valid`);
-          return false;
-        }
-  
-        // 檢查是否有其他點擊正在進行
-        if (this.isClickInProgress) {
-          console.log(`[KiroAssist] Pre-click validation failed: another click in progress`);
-          return false;
-        }
-  
-        return true;
-      }
-  
-      /**
-       * 記錄點擊前狀態
-       */
-      recordPreClickState(element, buttonType, elementKey, timestamp) {
-        this.isClickInProgress = true;
-        this.lastClickTime = timestamp;
-        
-        if (elementKey) {
-          this.recentClicks.set(elementKey, timestamp);
-        }
-        
-        this.processedElements.add(element);
-        
-        // 記錄詳細的點擊資訊
-        console.log(`[KiroAssist] Recording click state for ${buttonType} button at ${new Date(timestamp).toISOString()}`);
-      }
-  
-      /**
-       * 執行實際的點擊操作
-       */
-      performClick(element, buttonType) {
-        try {
-          // 滾動到元素位置確保可見
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          // 給一點時間讓滾動完成
-          setTimeout(() => {
-            // 觸發多種事件以確保相容性
-            this.triggerClickEvents(element);
-          }, 100);
-  
-          return true;
-        } catch (error) {
-          console.error(`[KiroAssist] Click execution failed:`, error);
-          return false;
-        }
-      }
-  
-      /**
-       * 觸發點擊事件
-       */
-      triggerClickEvents(element) {
-        // 觸發多個事件以確保最大相容性
-        const events = ['mousedown', 'mouseup', 'click'];
-        
-        events.forEach(eventType => {
-          try {
-            const event = new MouseEvent(eventType, {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-              button: 0,
-              buttons: 1,
-              clientX: element.getBoundingClientRect().left + element.getBoundingClientRect().width / 2,
-              clientY: element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2
-            });
-            element.dispatchEvent(event);
-          } catch (error) {
-            console.warn(`[KiroAssist] Failed to trigger ${eventType} event:`, error);
-          }
-        });
-  
-        // 備用的直接點擊
-        try {
-          element.click();
-        } catch (error) {
-          console.warn(`[KiroAssist] Direct click failed:`, error);
-        }
-      }
-  
-      /**
-       * 處理點擊成功
-       */
-      handleClickSuccess(element, buttonType, elementKey, timestamp) {
-        // 更新統計
-        this.totalClicks++;
-        const moduleKey = buttonType === 'retry' ? 'retryButton' : 'kiroSnackbar';
-        this.moduleStats[moduleKey]++;
-  
-        // 更新面板狀態
-        this.updatePanelStatus();
-        
-        // 記錄成功日誌
-        this.log(`已自動點擊 ${buttonType} 按鈕 (#${this.totalClicks})`, "success");
-        
-        // 額外的成功處理邏輯
-        const pattern = BUTTON_PATTERNS[buttonType];
-        if (pattern?.extraTime) {
-          // 對於需要額外時間的按鈕，延長冷卻期
-          if (elementKey) {
-            this.recentClicks.set(elementKey, timestamp + pattern.extraTime);
-          }
-        }
-  
-        console.log(`[KiroAssist] Click success - ${buttonType} button, total clicks: ${this.totalClicks}`);
-      }
-  
-      /**
-       * 處理點擊失敗
-       */
-      handleClickFailure(element, buttonType, elementKey) {
-        // 從處理列表中移除，允許重試
-        this.processedElements.delete(element);
-        if (elementKey) {
-          this.recentClicks.delete(elementKey);
-        }
-        
-        this.log(`點擊 ${buttonType} 按鈕失敗`, "error");
-        console.log(`[KiroAssist] Click failed for ${buttonType} button`);
-      }
-  
-      /**
-       * 處理點擊錯誤
-       */
-      handleClickError(element, buttonType, error, startTime) {
-        const duration = Date.now() - startTime;
-        this.log(`點擊${buttonType}失敗：${error.message} (耗時: ${duration}ms)`, "error");
-        console.error(`[KiroAssist] Click error for ${buttonType}:`, error);
-        
-        // 清理狀態
-        this.processedElements.delete(element);
-        const elementKey = this.getElementKey(element);
-        if (elementKey) {
-          this.recentClicks.delete(elementKey);
-        }
-      }
-  
-      /**
-       * 排程元素清理
-       */
-      scheduleElementCleanup(element, buttonType) {
-        const pattern = BUTTON_PATTERNS[buttonType];
-        const cleanupDelay = pattern?.extraTime ? pattern.extraTime + 1000 : 3000;
-        
-        setTimeout(() => {
-          this.processedElements.delete(element);
-          this.isClickInProgress = false;
-          console.log(`[KiroAssist] Cleaned up processed element for ${buttonType}`);
-        }, cleanupDelay);
-      }
   
   
       /**
@@ -2954,61 +2491,11 @@
         };
       }
   
-      /**
-       * [增強] 依序嘗試多個選擇器來尋找第一個可用的元素
-       */
-      findElementByPriority(selectors) {
-        for (const selector of selectors) {
-          const element = document.querySelector(selector);
-          if (element && this.isElementReady(element)) {
-            return element;
-          }
-        }
-        return null;
-      }
-  
-      /**
-       * [增強] 依 TARGET_DEFINITIONS 定義尋找並回傳第一個可點擊目標
-       */
-      findTargetByDefinitions() {
-        for (const target of TARGET_DEFINITIONS) {
-          const foundElement = this.findElementByPriority(target.selectors);
-          if (foundElement && (!target.validate || target.validate(foundElement))) {
-            return { element: foundElement, type: target.name };
-          }
-        }
-        return null;
-      }
+      
     }
   
-    // 創建實例
+        // 創建實例
     const kiroAssist = new KiroAssist();
-  
-    /**
-     * [增強] 目標定義清單 - 用於統一自動化檢測與點擊策略
-     * 依據 context7 最佳實踐，將所有主要自動化目標以結構化方式集中管理
-     */
-    const TARGET_DEFINITIONS = [
-      {
-        name: 'kiroSnackbarRun',
-        selectors: [
-          // 精確 Run 按鈕
-          'div.kiro-snackbar button.kiro-button[data-variant="primary"]',
-          ...SELECTORS.kiroSnackbarRun
-        ],
-        validate: (el) => el.textContent && el.textContent.trim().toLowerCase() === 'run' && (!el.disabled && el.offsetParent !== null)
-      },
-      {
-        name: 'retry',
-        selectors: [
-          // 精確 Retry 按鈕
-          'button.kiro-button[data-variant="secondary"][data-purpose="default"]',
-          ...SELECTORS.retryButtons
-        ],
-        validate: (el) => el.textContent && (el.textContent.trim().toLowerCase() === 'retry' || el.textContent.trim() === '重試') && (!el.disabled && el.offsetParent !== null)
-      }
-      // 可擴充更多目標，如 trust/reject 等
-    ];
 
     // 設定全域API
     window.KiroAssist = kiroAssist;
@@ -3022,7 +2509,7 @@
     window.stopRetryClicker = () => kiroAssist.stop();
     window.retryClickerStatus = () => kiroAssist.getStatus();
   
-    console.log("✨ KiroAssist v3.2.1 (智能助手專業版) 已載入！");
+    console.log("✨ KiroAssist v3.2.4 (智能助手專業版) 已載入！");
     console.log("🎛️ 新API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
     console.log("🔄 舊API: startRetryClicker(), stopRetryClicker(), retryClickerStatus() (向後相容)");
     console.log("👨‍💻 作者: threads:azlife_1224");
