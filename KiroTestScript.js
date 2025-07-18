@@ -129,7 +129,7 @@
       });
     });
   
-    /* ---------- lifecycle ---------- */
+    /* ----------- lifecycle ----------- */
     function start(){
       bodyMO.observe(document.body,{childList:true,subtree:true});
       scanAll("start");
