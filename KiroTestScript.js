@@ -1,137 +1,162 @@
-/**
- * 📦 KiroTestScript v1.2.1 – Run / Retry 自動點擊
- * 🗓 2025‑07‑18
- * ✨ 重點：
- *   • Observer 監聽 DOM + 屬性
- *   • 無限輪詢備援（750 ms）
- *   • 冷卻機制防重複
- *   • readyState 判斷，任何時機貼腳本都自動啟動
- */
-
-(function () {
-  "use strict";
-  if (window.KiroTestScript) return;   // 單例
-
-  /* === 設定 === */
-  const DEBUG          = true;   // 改 false 可靜默
-  const POLL_INTERVAL  = 750;    // ms
-  const CLICK_COOLDOWN = 3000;   // ms
-
-  const CONTAINERS = {
-    retry: [
-      ".kiro-chat-message-body",
-      ".kiro-chat-message",
-      ".kiro-chat-message-markdown",
-      '[class*="chat-message"]',
-      '[class*="message-body"]',
-    ],
-    run: [
-      ".kiro-snackbar",
-      ".kiro-snackbar-container",
-      ".kiro-snackbar-header",
-      ".kiro-snackbar-actions",
-      '[class*="snackbar"]',
-      '[class*="notification"]',
-    ],
-  };
-
-  const PATTERNS = {
-    retry: {
-      sel: [
-        'button[data-variant="secondary"]',
-        "button.kiro-button",
-      ],
-      kw: ["retry", "重試"],
-      priority: 1,
-    },
-    run: {
-      sel: [
-        'button[data-variant="primary"]',
-        "button.kiro-button",
-      ],
-      kw: ["run", "執行"],
-      priority: 2,
-    },
-  };
-
-  const log = (...a) => DEBUG && console.log("[KiroTest]", ...a);
-  const saf = (fn, ctx) => { try { return fn(); } catch(e){ console.error(`[KiroTest][${ctx}]`,e);} };
-
-  /* ----- Element 工具 ----- */
-  const Finder = {
-    query(pat, type) {
-      const r=[];
-      CONTAINERS[type].forEach(c=>document.querySelectorAll(c).forEach(host=>{
-        pat.sel.forEach(s=>r.push(...host.querySelectorAll(s)));
-      }));
-      return r.length? r : pat.sel.flatMap(s=>[...document.querySelectorAll(s)]);
-    },
-    ready(el){
-      if(!el||!el.isConnected) return false;
-      const st = getComputedStyle(el), r=el.getBoundingClientRect();
-      return st.display!=="none"&&st.visibility!=="hidden"&&+st.opacity>0.1&&r.width&&r.height&&!el.disabled&&!el.hasAttribute("disabled");
+// ==UserScript==
+// @name        KiroAuto – Run / Retry Only (v3.1.0)
+// @namespace   https://github.com/azlife1224/KiroAssist
+// @version     3.1.0
+// @description Auto‑click “Run” & “Retry” on Kiro, ignore “Follow”.
+// @match       *://*/*
+// @grant       none
+// ==/UserScript==
+(() => {
+    "use strict";
+    if (window.KiroAuto?.v >= 3.1) return;
+  
+    /* ------------ Config ------------ */
+    const cfg = {
+      poll        : 1000,     // fallback 輪詢
+      debounce    : 120,      // MO 防抖
+      debug       : true,     // console.log
+      maxDelay    : 100       // 等待指標解鎖的 rAF 時間
+    };
+  
+    const KW = {
+      run   : ["run","trust","accept","執行","play"],
+      retry : ["retry","again","重試"],
+      ignore: [/follow/i]     // 可放字串或 RegExp
+    };
+  
+    /* ---------- helpers ---------- */
+    const clean = s => s
+        .replace(/\u00a0/g," ")
+        .replace(/\s+/g," ")
+        .trim().toLowerCase();
+  
+    const txtOf = btn => clean(
+        [btn.innerText,               // <-- 比 textContent 更乾淨
+         btn.getAttribute("aria-label"),
+         btn.getAttribute("title"),
+         btn.getAttribute("data-tooltip-content")].filter(Boolean).join(" ")
+    );
+  
+    const hasKW = (txt,list) => list.some(k =>
+        (k instanceof RegExp) ? k.test(txt) : txt.includes(k)
+    );
+  
+    const isVisible = el => {
+      const r = el.getBoundingClientRect();
+      const st = getComputedStyle(el);
+      return r.width && r.height && st.display!=="none" &&
+             st.visibility!=="hidden" && parseFloat(st.opacity) > .15;
+    };
+  
+    const nativeClickable = el =>
+          !el.disabled && !el.hasAttribute("disabled") &&
+          getComputedStyle(el).pointerEvents !== "none";
+  
+    const log = (...a)=> cfg.debug && console.log("[KiroAuto]",...a);
+  
+    /* ---------- classify ---------- */
+    function classify(btn){
+      const txt = txtOf(btn);
+      if (hasKW(txt,KW.ignore)) return "ignore";
+  
+      const v = (btn.dataset.variant||"").toLowerCase();
+      const p = (btn.dataset.purpose||"").toLowerCase();
+      if (v==="primary"   && p==="alert")   return "run";
+      if (v==="secondary" && p==="default") return "retry";
+  
+      if (hasKW(txt,KW.run))   return "run";
+      if (hasKW(txt,KW.retry)) return "retry";
+      return null;
     }
-  };
-
-  /* ----- 主控制器 ----- */
-  class KiroTest {
-    constructor(){
-      this.running=false;
-      this.cool=new Map();
-      this.stats={retry:0,run:0,total:0};
-
-      this.observer=new MutationObserver(()=>saf(()=>this.scan(),"observer"));
-    }
-    start(){
-      if(this.running) return;
-      this.running=true;
-      this.observer.observe(document.body,{
-        childList:true,subtree:true,attributes:true,
-        attributeFilter:["class","style","data-active","data-loading","hidden","disabled"]
-      });
-      this.poll=setInterval(()=>saf(()=>this.scan(),"poll"),POLL_INTERVAL);
-      saf(()=>this.scan(),"first-scan");
-      log("Start ✅");
-    }
-    stop(){
-      if(!this.running) return;
-      this.running=false;
-      this.observer.disconnect();
-      clearInterval(this.poll);
-      log("Stop ⏹️");
-    }
-    scan(){
-      const list=Object.entries(PATTERNS).sort(([,a],[,b])=>a.priority-b.priority);
-      for(const [type,pat] of list){
-        for(const btn of Finder.query(pat,type)){
-          if(!Finder.ready(btn)) continue;
-          const t0=this.cool.get(btn)||0;
-          if(Date.now()-t0<CLICK_COOLDOWN) continue;
-          const txt=btn.textContent.trim().toLowerCase();
-          if(!pat.kw.some(k=>txt.includes(k))) continue;
-
-          btn.click();
-          this.cool.set(btn,Date.now());
-          this.stats[type]++;this.stats.total++;
-          log(`🔘 點擊 ${type.toUpperCase()} | "${txt}"`);
-          return; // 每輪點一顆
-        }
+  
+    /* ---------- click engine ---------- */
+    const clicked = new WeakSet();
+    const stats   = {run:0,retry:0,ignore:0};
+  
+    function reallyClick(btn){
+      try { btn.click(); }
+      catch{
+        // fallback: 派發 MouseEvent
+        ["mousedown","mouseup","click"].forEach(t=>{
+          btn.dispatchEvent(new MouseEvent(t,{bubbles:true}));
+        });
       }
     }
-    info(){ return {...this.stats,running:this.running}; }
-  }
-
-  /* ----- 全域 API ----- */
-  const inst=new KiroTest();
-  window.KiroTestScript=inst;
-  window.startKiroTest =()=>inst.start();
-  window.stopKiroTest  =()=>inst.stop();
-  window.kiroTestStats =()=>inst.info();
-
-  /* ----- 自動啟動 (任何時機) ----- */
-  if(document.readyState==="complete"||document.readyState==="interactive"){
-    inst.start();
-  }else{
-    window.addEventListener("load",()=>inst.start());
-  }
-})();
+  
+    function attempt(btn,src,delay=0){
+      if (clicked.has(btn)) return;
+  
+      const doIt = () => {
+        if (!isVisible(btn)) return;
+        const type = classify(btn);
+        if (!type) return;
+        if (type==="ignore"){ stats.ignore++; log("🚫 IGNORE |",src,"|",txtOf(btn)); return;}
+  
+        reallyClick(btn);
+        clicked.add(btn);
+        stats[type]++;
+  
+        log(`🔘 Click ${type.toUpperCase()} | from ${src} | "${txtOf(btn)}"`);
+      };
+  
+      delay ? requestAnimationFrame(()=>setTimeout(doIt,delay))
+            : doIt();
+    }
+  
+    /* ---------- scanners ---------- */
+    function scanAll(src="poll"){
+      document.querySelectorAll("button.kiro-button,button[data-variant]")
+              .forEach(btn=>{
+                if(!nativeClickable(btn))
+                     attempt(btn,src,cfg.maxDelay);  // 延後再試
+                else attempt(btn,src);
+              });
+    }
+  
+    /* ---------- MutationObservers ---------- */
+    const bodyMO = new MutationObserver(muts=>{
+      clearTimeout(bodyMO.deb);
+      bodyMO.deb = setTimeout(()=>scanAll("mutation"), cfg.debounce);
+    });
+  
+    // 專盯 snackbar actions
+    const actionMO = new MutationObserver(muts=>{
+      muts.forEach(m=>{
+        m.addedNodes.forEach(n=>{
+          if (n.nodeType===1 && n.tagName==="BUTTON")
+            attempt(n,"snackbar");
+        });
+      });
+    });
+  
+    /* ---------- lifecycle ---------- */
+    function start(){
+      bodyMO.observe(document.body,{childList:true,subtree:true});
+      scanAll("start");
+  
+      // snackbar observer
+      const root = document.body;
+      const watchActions = node=>{
+        node.querySelectorAll(".kiro-snackbar-actions")
+            .forEach(a=>actionMO.observe(a,{childList:true}));
+      };
+      watchActions(root);
+      bodyMO.addEventListener?.("mutate",m=>watchActions(document.body)); // safety
+  
+      start.timer = setInterval(scanAll, cfg.poll);
+      log("MO start");
+    }
+  
+    function stop(){
+      bodyMO.disconnect();
+      actionMO.disconnect();
+      clearInterval(start.timer);
+      log("MO stop");
+    }
+  
+    /* ---------- expose ---------- */
+    window.KiroAuto = {v:3.1,start,stop,cfg,stats};
+    start();
+    log(`Injected KiroAuto v${window.KiroAuto.v}`);
+  })();
+  
