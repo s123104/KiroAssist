@@ -141,7 +141,7 @@
                     return Array.from(elements);
                 }
             } catch (e) {
-                console.warn(`[KiroAssist] 選擇器失效: ${selector}`, e);
+                debugLog(`選擇器失效: ${selector}`, e);
             }
         }
         return [];
@@ -173,60 +173,32 @@
     }
 
     /**
-     * 主函式：遍歷所有目標定義，使用彈性選擇器尋找並點擊。
+     * 🎯 統一檢測與點擊函式 - 消除冗餘代碼
      */
-    function checkAndClick() {
-        // 按優先級排序的按鈕模式
-        const sortedPatterns = Object.entries(BUTTON_PATTERNS)
-            .sort(([,a], [,b]) => a.priority - b.priority);
-
-        for (const [patternName, pattern] of sortedPatterns) {
-            // 檢查模組是否啟用
-            const moduleKey = patternName === 'run' ? 'kiroSnackbar' : 'retryButton';
-            if (window.KiroAssist && !window.KiroAssist.moduleConfig[moduleKey].enabled) {
-                continue;
-            }
-
-            // 使用智能檢測器查找按鈕
-            const foundButtons = findButtonsInContainers(pattern);
-            
-            for (const button of foundButtons) {
-                if (isElementReady(button)) {
-                    // 驗證按鈕文字內容
-                    const buttonText = button.textContent.trim().toLowerCase();
-                    const isValidButton = pattern.keywords.some(keyword => 
-                        buttonText.includes(keyword.toLowerCase())
-                    );
-                    
-                    if (isValidButton) {
-                        console.log(`[KiroAssist] 發現目標: "${patternName}"，按鈕文字: "${button.textContent.trim()}"，執行點擊！`);
-                        button.click();
-                        
-                        // 更新統計
-                        if (window.KiroAssist) {
-                            window.KiroAssist.totalClicks++;
-                            window.KiroAssist.moduleStats[moduleKey]++;
-                            window.KiroAssist.updateControlPanel();
-                        }
-                        
-                        return;
-                    }
-                }
-            }
+    function findAndClick(patternName, pattern) {
+        const moduleKey = patternName === 'run' ? 'kiroSnackbar' : 'retryButton';
+        
+        // 檢查模組是否啟用
+        if (window.KiroAssist && !window.KiroAssist.moduleConfig[moduleKey].enabled) {
+            return false;
         }
 
-        // 向後相容：使用原始 TARGET_DEFINITIONS 作為最終備案
-        for (const target of TARGET_DEFINITIONS) {
-            const moduleKey = target.name === 'Run Button' ? 'kiroSnackbar' : 'retryButton';
-            if (window.KiroAssist && !window.KiroAssist.moduleConfig[moduleKey].enabled) {
-                continue;
-            }
+        // 在容器 + 全域兩階段尋找
+        let buttons = findButtonsInContainers(pattern);
+        if (!buttons.length) {
+            buttons = findElementsWithFallback(pattern.selectors);
+        }
 
-            const foundElements = findElementsWithFallback(target.selectors);
-            for (const element of foundElements) {
-                if (isElementReady(element) && (!target.validate || target.validate(element))) {
-                    console.log(`[KiroAssist] 備案檢測發現目標: "${target.name}"，執行點擊！`);
-                    element.click();
+        for (const btn of buttons) {
+            if (isElementReady(btn)) {
+                // 驗證關鍵字
+                const buttonText = btn.textContent.trim().toLowerCase();
+                const isValidButton = pattern.keywords.some(keyword => 
+                    buttonText.includes(keyword.toLowerCase())
+                );
+                
+                if (isValidButton) {
+                    btn.click();
                     
                     // 更新統計
                     if (window.KiroAssist) {
@@ -235,22 +207,61 @@
                         window.KiroAssist.updateControlPanel();
                     }
                     
-                    return;
+                    console.log(`[KiroAssist] 點擊 ${patternName} 按鈕: "${btn.textContent.trim()}"`);
+                    debugLog(`點擊詳情`, { patternName, element: btn, text: btn.textContent.trim() });
+                    return true;
                 }
             }
         }
+        return false;
+    }
+
+    /**
+     * 主函式：統一檢測邏輯，按優先級檢測並點擊
+     */
+    function checkAndClick() {
+        const sortedPatterns = Object.entries(BUTTON_PATTERNS)
+            .sort(([,a], [,b]) => a.priority - b.priority);
+
+        for (const [name, pattern] of sortedPatterns) {
+            if (findAndClick(name, pattern)) {
+                return true; // 成功點擊後結束
+            }
+        }
+        return false;
     }
 
     // --- DOM 變動監視器 ---
     const observer = new MutationObserver(() => {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(checkAndClick, DEBOUNCE_DELAY);
+        debounceTimer = setTimeout(() => {
+            safeExecute(checkAndClick, 'MutationObserver checkAndClick');
+        }, DEBOUNCE_DELAY);
     });
 
     function startObserver() {
-        observer.observe(document.body, { childList: true, subtree: true });
-        console.log('[KiroAssist] 極簡腳本邏輯已啟動...');
-        checkAndClick();
+        // 先執行一次檢測
+        safeExecute(checkAndClick, 'initial checkAndClick');
+
+        // 強化的 MutationObserver 配置
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class', 'data-active', 'data-loading', 'hidden', 'disabled']
+        });
+        
+        console.log('[KiroAssist] 強化監控已啟動 (屬性+節點變動)');
+        
+        // 輪詢備援機制 - 5次檢測確保穩定
+        let tries = 0;
+        const poller = setInterval(() => {
+            const success = safeExecute(checkAndClick, 'polling checkAndClick');
+            if (success || ++tries >= 5) {
+                clearInterval(poller);
+                debugLog(`輪詢備援完成，嘗試次數: ${tries}`);
+            }
+        }, 500);
     }
 
     function stopObserver() {
@@ -470,7 +481,7 @@
      */
     class KiroAssist {
       constructor() {
-        this.version = "3.2.7";
+        this.version = "3.2.8";
         this.isRunning = false;
         this.totalClicks = 0;
         this.controlPanel = null;
@@ -496,7 +507,7 @@
         };
         
         this.createControlPanel();
-        this.log("🚀 KiroAssist v3.2.7 已初始化 (範例頁面針對性優化版)", "success");
+        this.log("🚀 KiroAssist v3.2.8 已初始化 (重構優化版)", "success");
       }
 
       start() {
@@ -832,7 +843,7 @@
         // 版本號顯示
         const authorVersion = document.createElement("div");
         authorVersion.className = "prc-author-version";
-        authorVersion.textContent = "v3.2.7";
+        authorVersion.textContent = "v3.2.8";
         authorInfo.appendChild(authorVersion);
   
         authorInfo.appendChild(authorName);
@@ -1795,10 +1806,11 @@
         window.addEventListener('DOMContentLoaded', startObserver);
     }
 
-    console.log("✨ KiroAssist v3.2.7 (範例頁面針對性優化版) 已載入！");
+    console.log("✨ KiroAssist v3.2.8 (重構優化版) 已載入！");
     console.log("🎛️ API: startKiroAssist(), stopKiroAssist(), kiroAssistStatus()");
     console.log("👨‍💻 作者: threads:azlife_1224");
-    console.log("🎯 功能: 針對具體範例頁面進行精確選擇器優化，確保100%檢測成功率");
-    console.log("🚀 特色: 精確屬性組合匹配 + 範例頁面優化 + 智能容器檢測");
+    console.log("🎯 功能: 基於最佳實踐進行全面重構，統一檢測邏輯，強化穩定性");
+    console.log("🚀 特色: 統一檢測邏輯 + 強化MutationObserver + 輪詢備援 + 錯誤保護");
+    console.log("🔧 Debug: localStorage.setItem('kiroAssist.debug', 'true') 啟用除錯模式");
       
 })();
