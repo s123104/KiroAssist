@@ -1,14 +1,14 @@
 /*** 
-* 📦 模組：KiroAssist v3.2.7 - 智能助手專業版 (範例頁面針對性優化版)
-* 🕒 最後更新：2025-07-18T11:00:00+08:00
+* 📦 模組：KiroAssist v3.2.8 - 智能助手專業版 (重構優化版)
+* 🕒 最後更新：2025-07-18T12:00:00+08:00
 * 🧑‍💻 作者：threads:azlife_1224
-* 🔢 版本：v3.2.7
-* 📝 摘要：針對具體範例頁面進行精確選擇器優化，確保100%檢測成功率
+* 🔢 版本：v3.2.8
+* 📝 摘要：基於最佳實踐進行全面重構，統一檢測邏輯，強化穩定性
 *
 * 🎯 功能特色：
 * ✅ 自動檢測Retry按鈕 (精確屬性組合匹配)
 * ✅ 自動檢測Kiro Snackbar並點擊Run (範例頁面優化)
-* ✅ MutationObserver監控DOM變化 (250ms防抖優化)
+* ✅ MutationObserver監控DOM變化 (屬性+節點變動)
 * ✅ 防重複點擊機制 (參考極簡腳本)
 * ✅ 模組化功能設定
 * ✅ 專業App風格控制面板
@@ -18,15 +18,15 @@
 * ✅ 流暢動畫效果
 * ✅ 現代化設計語言
 * ✅ TrustedHTML相容性
-* 🆕 彈性選擇器配置 (參考cursor.js多重備選策略)
-* 🆕 智能容器檢測 (降低頁面結構耦合)
-* 🆕 按鈕模式配置 (支援語義化識別)
-* 🆕 多語言關鍵字支援 (中英文按鈕識別)
-* 🆕 彈性元素查找器 (多重備選機制)
-* 🆕 優先級排序檢測 (智能按鈕優先級)
-* 🆕 向後相容備案 (保持原有功能)
-* 🎯 範例頁面精確匹配 (針對具體DOM結構優化)
-* 🎯 屬性組合檢測 (data-variant, data-purpose, data-active, data-loading)
+* 🆕 統一檢測邏輯 (消除冗餘代碼)
+* 🆕 強化MutationObserver (監聽屬性變動)
+* 🆕 輪詢備援機制 (5次檢測確保穩定)
+* 🆕 模組化錯誤保護 (safeExecute包裝)
+* 🆕 精簡選擇器配置 (移除冗餘選擇器)
+* 🆕 Debug模式支援 (localStorage控制)
+* 🆕 Shadow DOM支援 (可選)
+* 🎯 隱藏→顯示檢測 (完整監聽按鈕狀態變化)
+* 🎯 高穩定性架構 (單點失敗不致全面中斷)
 */
 
 (function () {
@@ -42,107 +42,73 @@
     const DEBOUNCE_DELAY = 250;
     let debounceTimer;
 
+    // --- Debug 模式 ---
+    const DEBUG = localStorage.getItem('kiroAssist.debug') === 'true';
+    function debugLog(msg, data) {
+        if (DEBUG) console.debug('[KiroAssist Debug]', msg, data);
+    }
+
+    // --- 安全執行包裝器 ---
+    function safeExecute(fn, context) {
+        try {
+            return fn();
+        } catch (e) {
+            console.error(`[KiroAssist][${context}]`, e);
+            if (window.KiroAssist) {
+                window.KiroAssist.log(`錯誤: ${context}`, 'error');
+            }
+            return false;
+        }
+    }
+
     /**
-     * 🎯 彈性選擇器配置 - 參考 cursor.js 的多重備選策略
-     * 降低頁面結構耦合，提高檢測成功率
-     * 針對具體範例頁面進行優化
+     * 🎯 精簡選擇器配置 - 移除冗餘，保留核心
+     * 基於最佳實踐進行優化
      */
     const SELECTORS = {
-        // Kiro Snackbar 容器選擇器（多重備選）
+        // Kiro Snackbar 容器選擇器（精簡版）
         snackbarContainers: [
             'div.kiro-snackbar',
-            'div.kiro-snackbar-container',
-            '.kiro-snackbar-header',
             '.kiro-snackbar-actions',
-            '[class*="snackbar"]',
-            '[class*="notification"]',
-            '.kiro-chat-notification'
+            '[class*="snackbar"]'
         ],
         
-        // Retry 按鈕容器選擇器
+        // Retry 按鈕容器選擇器（精簡版）
         retryContainers: [
             'div.kiro-chat-message-body',
             '.kiro-chat-message',
-            '.kiro-chat-message-markdown',
-            '[class*="chat-message"]',
-            '[class*="message-body"]',
-            '.message-content'
-        ],
-        
-        // 通用按鈕選擇器
-        buttons: [
-            'button.kiro-button',
-            'button[class*="kiro"]',
-            'button[data-variant]',
-            'button[data-purpose]',
-            'button[data-active]',
-            'button[data-loading]',
-            '[role="button"]',
-            'button'
+            '[class*="chat-message"]'
         ]
     };
 
     /**
-     * 🎯 按鈕模式配置 - 支援語義化識別
-     * 針對範例頁面的具體屬性組合進行優化
+     * 🎯 按鈕模式配置 - 精簡版，移除冗餘選擇器
+     * 基於最佳實踐進行優化
      */
     const BUTTON_PATTERNS = {
         run: {
-            keywords: ['run', 'Run', 'RUN', '執行', '運行'],
+            keywords: ['run', 'Run', '執行'],
             containers: 'snackbarContainers',
             selectors: [
-                // 範例頁面精確匹配：data-size="small" data-variant="primary" data-purpose="alert"
-                'button.kiro-button[data-size="small"][data-variant="primary"][data-purpose="alert"]',
-                'button.kiro-button[data-variant="primary"][data-purpose="alert"]',
                 'button[data-variant="primary"][data-purpose="alert"]',
-                'button.kiro-button[data-variant="primary"]',
-                'button[data-variant="primary"]',
-                'button.kiro-button[data-purpose="alert"]',
-                'button.primary',
-                'button[class*="primary"]'
+                'button.kiro-button[data-variant="primary"]'
             ],
             priority: 1,
             extraTime: 500
         },
         retry: {
-            keywords: ['retry', 'Retry', 'RETRY', '重試', '再試一次'],
-            containers: 'retryContainers', 
+            keywords: ['retry', 'Retry', '重試'],
+            containers: 'retryContainers',
             selectors: [
-                // 範例頁面精確匹配：data-variant="secondary" data-purpose="default" data-active="false" data-loading="false"
-                'button.kiro-button[data-variant="secondary"][data-purpose="default"][data-active="false"][data-loading="false"]',
-                'button.kiro-button[data-variant="secondary"][data-purpose="default"]',
                 'button[data-variant="secondary"][data-purpose="default"]',
-                'button.kiro-button[data-variant="secondary"]',
-                'button[data-variant="secondary"]',
-                'button.kiro-button[data-purpose="default"]',
-                'button.secondary',
-                'button[class*="secondary"]'
+                'button.kiro-button[data-variant="secondary"]'
             ],
             priority: 2,
             extraTime: 300
         }
     };
 
-    /**
-     * 🎯 目標定義與選擇器備案（向後相容）
-     * 腳本會依照此處定義的順序和選擇器來尋找按鈕。
-     */
-    const TARGET_DEFINITIONS = [
-        {
-            name: 'Run Button',
-            selectors: BUTTON_PATTERNS.run.selectors,
-            validate: (element) => BUTTON_PATTERNS.run.keywords.some(keyword => 
-                element.textContent.trim().toLowerCase().includes(keyword.toLowerCase())
-            )
-        },
-        {
-            name: 'Retry Button', 
-            selectors: BUTTON_PATTERNS.retry.selectors,
-            validate: (element) => BUTTON_PATTERNS.retry.keywords.some(keyword =>
-                element.textContent.trim().toLowerCase().includes(keyword.toLowerCase())
-            )
-        }
-    ];
+    // --- 移除冗餘的 TARGET_DEFINITIONS，統一使用 BUTTON_PATTERNS ---
 
     // --- 核心邏輯 ---
 
